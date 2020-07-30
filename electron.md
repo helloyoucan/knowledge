@@ -88,10 +88,11 @@ ipcRenderer.on('msg-name2', (event, arg) => {
        "target": [{
            "target": "nsis",// 我们要的目标安装包
            "arch": [ // 这个意思是打出来32 bit + 64 bit的包，但是要注意：这样打包出来的安装包体积比较大，所以建议直接打32的安装包。
-        "x64", 
-        "ia32"
-      ]
-       }] 
+        	"x64", 
+       		"ia32"
+      	   ]
+       }],
+       'verifyUpdateCodeSignature': true, //不校验两个版本安装程序的证书是否一致
     }
      "nsis": {
       "oneClick": false, // 是否一键安装
@@ -143,7 +144,7 @@ autoUpdater.on('update-available', e => {
 
 ```javascript
 autoUpdater.setFeedURL('https://www.baidu.com/') // 同build.publish.url,这里一定要符合http协议的url
-autoUpdater.doDownloadUpdate({
+const updateInfo = {
         updateInfo:{
         	version: info.version,
       		files: [{
@@ -155,10 +156,18 @@ autoUpdater.doDownloadUpdate({
       		sha512: info.file.sha512,
       		releaseDate: new Date(info.releaseDate)//发布日期
         }
-})
+}
+autoUpdater.doDownloadUpdate(updateInfo) //#返回promise,取消下载会导致rejected；window校验文件失败也会导致rejected；mac不会校验sha542（估计是检验签名）,mac检验失败会触发error事件
+autoUpdater.updateInfo = updateInfo //mac会使用version属性
 ```
 
 要注意的是,上面的代码是通过设置必需的更新信息,达到不需要调用autoUpdater.checkForUpdates()的方式去下载指定资源的行为
 
 - sha512是在打包安装程序后,在latest.yml出现的md5,用于检验文件是否下载完整
 - updateInfo的数据,均可在latest.yml找到,除了url
+
+发现问题：
+
+1. 使用electron-builder带的自动签名后，部分电脑当webgl崩溃后，忽略崩溃的参数无效（导致webgl使用不了）
+
+   解决：手动使用window下的signtool.exe使用命令行签名

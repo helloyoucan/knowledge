@@ -1,0 +1,580 @@
+
+
+
+
+#### 组件Widget
+
+- 无状态组件
+
+  可以理解为将外部传入的数据转化为界面展示的内容，只会渲染一次。
+
+- 有状态组件
+
+  是定义交互逻辑和业务数据，可以理解为具有动态可交互的内容界面，会根据数据的变化进行多次渲染。
+
+#### 生命周期
+
+Flutter 中说的生命周期，也是指**有状态组件**，对于**无状态组件生命周期只有 build 这个过程**，也只会渲染一次，而有状态组件则比较复杂
+
+- **`createState`**  
+
+  `StatefulWidget`中创建State的方法，当`StatefulWidget`被调用时会立即执行。
+
+- **`initState`**
+
+  State初始化时调用，可以在此期间执行State各变量的初始化赋值，也可以与服务端交换，获取服务端数据后调用`setState`来设置State
+
+- **`didChangeDependencies`**
+
+  组件依赖的全局State发生变化时调用。（类似`Redux`的State）
+
+- **`build`**
+
+  返回需要渲染的Widget，会被调用多次，所以在函数内只能做返回Widget的相关逻辑，避免执行多次导致状态异常。（类似react的render）
+
+- **`reassemble`**
+
+  开发阶段使用，在debug模式下，热重载时调用，debug时可以在这真debug代码检查代码问题
+
+- **`didUpdateWidget`**
+
+  在主机重新构建（例如热重载），父组件发生build时，子组件的方法才会被调用，该方法调用后会再调用本主机中的build方法
+
+- **`deactivate`**
+
+  组件被移除节点后被调用，如果移除后未被插入到其它节点，会继续调用disspose永久移除。
+
+- **`dispose`**
+
+  永久移除组件，并释放组件资源。
+
+![Flutter生命周期](https://raw.githubusercontent.com/helloyoucan/cloudImg/master/imgs/%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF.png)
+
+整个过程分为四个阶段：
+
+1. 初始化阶段，包括两个生命周期函数 `createState` 和`initState`；
+2. 组件创建阶段，也可以称组件出生阶段，包括 `didChangeDependencies` 和 `build`；
+3. 触发组件多次 build ，这个阶段有可能是因为 `didChangeDependencies`、`setState` 或者 `didUpdateWidget` 而引发的组件重新 build ，在组件运行过程中会多次被触发，这也是优化过程中需要着重需要注意的点；
+4. 最后是组件销毁阶段，deactivate 和 dispose。
+
+注意：
+
+> 在开发模式，build会调用两次，正式环境不会出现，可通过修改`constants.dart`解决。
+
+
+
+###### 触发组件再次build
+
+- `setState`
+- `didChangeDependencies`
+- `didUpdateWidget `
+
+
+
+#### Dart单线程
+
+>  核心：主线程、微任务、宏任务
+
+- 主线程：执行业务逻辑、网络I/O、本地文件I/O、事件循环等相关任务事件，应用时间驱动方式执行。
+- 微任务队列：包含Dart内部的微任务，主要通过`sheduleMicrotask`来调度。
+- 事件队列：包含外部事件，例如I/O、Timer、绘制事件等。
+
+
+
+#### 事件循环
+
+1. 执行main函数，产生微任务队列和事件任务队列
+2. 判断是否有微任务，有则执行，执行完再次判断执行
+3. 没有可执行的微任务，则判断是否存在事件任务，无则方法判断是否存在微任务
+4. 在微任务和事件任务执行时，可能会产生微任务和事件任务，所以需要再次判断啥时候需要插入微任务队列和事件任务队列
+
+![事件循环](https://raw.githubusercontent.com/helloyoucan/cloudImg/master/imgs/%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF.png)
+
+```dart
+import 'dart:async';
+void main() {
+	print('flow start'); // 执行打印开始 
+	// 执行判断为事件任务，添加到事件任务队列
+	Timer.run((){ 
+       print('event'); // 执行事件任务，打印标记
+   	});
+   	// 执行判断为微任务，添加到微任务队列 
+	scheduleMicrotask((){ 
+        print('microtask'); // 执行微任务，打印标记
+    });
+	print('flow end'); // 打印结束标记
+}
+/*
+首先主线程逻辑，执行打印 start ；
+执行 Timer，为事件任务，将其增加到事件任务队列中；
+执行 scheduleMicrotask，为微任务队列，将其增加到微任务队列中；
+执行打印 flow end；
+判断是否存在微任务队列，存在则执行微任务队列，打印 mcrotask；
+判断是否还存在微任务队列，无则判断是否存在事件任务队列，存在执行事件任务队列，打印 event。
+运行结果：
+flow start
+flow end
+microtask
+event
+*/
+```
+
+
+
+#### 线程&异步
+
+- 单线程执行模型，支持`Ioslate`（一种在另一个线程上运行Dart代码的方法）
+
+- 除了创建Isolate，Dart代码用于运行在UI线程，并由event loop驱动
+- 需要使用CPU执行繁忙的计算密集型任务，可使用Isolate来避免阻塞event loop (独立于主线程，不与主线程的内存堆共享内存，不能访问主线程的变量，不能使用setState来更新UI)
+- Looper是附加在主线程上的
+- 通过`async/await`可实现异步操作
+
+
+
+
+
+#### `Isolate`多线程
+
+ Dart 的单线程叫作 isolate 线程，每个 isolate 线程之间是不共享内存的，通过消息机制通信。
+
+```dart
+import 'dart:async';
+import 'dart:isolate';
+Isolate isolate;
+String name = 'dart';
+void main() {
+	// 执行新线程创建函数
+ 	isolateServer();
+}
+/// 多线程函数
+void isolateServer()async{
+	// 创建新的线程，并且执行回调 changName 
+	final receive = ReceivePort();
+	isolate = await Isolate.spawn(changName, receive.sendPort);
+	// 监听线程返回信息 
+	receive.listen((data){
+		print("Myname is $data"); // 打印线程返回的数据
+		print("Myname is $name"); // 打印全局 name 的数据
+	});
+}
+/// 线程回调处理函数
+void changName(SendPort port){
+	name = 'dart isloate'; // 修改当前全局 name 属性
+	port.send(name); // 将当前name发送给监听方
+	print("Myname is $name in isloate"); // 打印当前线程中的 name
+}
+/*
+import 对应的库；
+声明两个变量，一个是 isolate 对象，一个是字符串类型的 name；
+执行 main 函数，main 函数中执行 isolateServer 异步函数；
+isolateServer 中创建了一个 isolate 线程，创建线程时候，可以传递接受回调的函数 changName；
+在 changName 中修改当前的全局变量 name ，并且发送消息给到接收的端口，并且打印该线程中的 name 属性；
+isolateServer 接收消息，接收消息后打印返回的数据和当前 name 变量。
+*/
+```
+
+#### 组件结合要点
+
+1. 尽可能减少动态组件下的静态组件；
+2. 数据来源相同的部分组合为同一组件；
+3. 使用行或者列作为合并的条件；
+4. 功能相同的部分，转化为基础组件；
+5. 合并后根节点的为 Container。
+
+
+
+
+
+#### 状态管理：
+
+1. `InheritedWidget`
+
+   `InheritedWidget` 核心原理和状态提升原理一致，将数据 提升到根节点，但不需要一层层地将变量传递下去，只需要在根节点声明即可。
+
+   ```
+   1.首先创建一个根结点为一个有状态组件 name_game；
+   2.name_game 为一个有状态类，状态属性为 name，并带有 changName 的状态修改方法；
+   3.创建一个状态管理类组件 NameInheritedWidget ；
+   4.创建 NameInheritedWidget 的三个子组件，分别为 welcome（显示欢迎 name ）、random_name（显示 name ，并且有点击切换随机 name 操作）和 other_widgets 。
+   ```
+
+   
+
+2. `Redux`
+
+   `Redu`x 并非第一选择。`Redux` 核心思想是单向数据流架构，将所有的状态存储在 store 中，所有数据改变都是通过 Action ，然后 Action 触发 store 存储，store 变化触发所有应用该状态的组件的 build 操作。
+
+   ```
+   1.因为是第三方库，因此需要在 pubspec.yaml 增加依赖；
+   2.实现 state 管理中心；
+   3.创建相应的 Action ，触发状态变化；
+   4.创建相应的 reduce；
+   5.将状态添加到 store 中，并放在 APP 最顶层。
+   ```
+
+   
+
+3. Provider
+
+   官方推荐的技术方案 Provider
+
+   ```
+   1.创建状态管理类 name_model ，创建对应的状态 name 以及其修改 name 的方法 changeName；
+   2.在 name_game 中增加 provider 的支持，并将相应需要共享的组件使用 provider 进行封装，监听数据变化；
+   3.在子组件中获取 provider 的 name 数据以及 changeName 方法，在相应的点击部分触发 changeName 事件。
+   ```
+
+
+
+
+
+
+#### Scheme
+
+Scheme 是一种` App` 内跳转协议，通过 Scheme 协议在 `APP` 内实现一些页面的互相跳转。
+
+```
+[scheme]://[host]/[path]?[query]
+```
+
+scheme填写`App`的名字
+
+
+
+### 布局相关
+
+##### 水平&垂直布局
+
+Row,Column
+
+```dart
+Row(
+    mainAxisAlignment:MainAxisAliginment.center,
+    children:<Widget>[
+        Text('1'),
+        Text('1'),
+        Text('1'),
+        Text('1'),
+    ]
+);
+```
+
+
+
+##### absolute定位布局
+
+Stack
+
+```dart
+Stack(
+alignment:const Alignment(0.6,0.6),
+    children:<Widget>[
+        CircleAvatar(
+        	backgroundImage:NetworkImage('xxxx'),
+        ),
+        Container(
+            decoration:BoxDecoration(
+            	color:Colors.black45,
+            ),
+            child:Text('aaaaa')
+        ),
+    ]
+);
+```
+
+
+
+##### 布局样式
+
+Widget : Padding,Center,Column,Row
+
+构造参数:`TextStyle`
+
+
+
+##### 实现`ScrollView`
+
+使用`ListView`既是列表，又可以超出滚动。
+
+
+
+##### 列表组件
+
+`ListView`,`RecyclerView`
+
+
+
+##### 点击列表中的item
+
+通过`GestureDetector`
+
+
+
+#####动态更新`ListView`
+
+- 在`setState`中创建一个新的List，并把旧List的数据拷贝给新的list（数据量大时不推荐）
+- 使用`ListView.Builder`来构建列表（高效，构建动力列表，或是列表拥有大量数据）
+
+
+
+### 组件&路由
+
+##### `StatelessWidget`
+
+不需要状态更改的`widget`，没有要管理的的内部状态。
+
+> 用户界面不需要依赖对象本身中的配置信息以及Widget的`BuildContext`
+
+无状态的widget的build方法通常之后在以下三种情况调用：
+
+- 将widget插入树中
+- 当widget的父级更改其配置时
+- 当它依赖的`inherritedWidget`发生变化时
+
+
+
+##### `StatefulWidget`
+
+- 使用`setState`方法管理`StatefulWidget`的状态的改变
+
+```dart
+class A extends StatefulWidget{
+    _AState createState() => _ASTate();
+}
+class _AState extends State<A>{
+    int index= 0;
+    void initState(){
+        index = 1;
+    }
+    /*
+    * setState((){
+    *	index=3;
+    * });
+    */
+    Widget build(BuildContext context){
+        
+    }
+}
+```
+
+
+
+
+
+### 路由与导航
+
+###### 管理多屏幕：Route和Navigator
+
+- Route是应用程序的“屏幕”或“页面”的抽象（可以认为是Activity）
+- `Navigatior`是管理Route的Widget，`Navigatior`可以用过push和pop route实现页面切换
+
+###### 以上两种widget对应Flutter中实现页面的有两种选择：
+
+- 具体指定一个路由名构成的Map。(`MaterialApp`)
+- 直接跳转到一个路由。（`WidgetApp`）
+
+```dart
+void main(){
+    runApp(MaterialApp(
+	    home:MyAppHome(), // becomes the route named '/'
+        routes:<string,Widget>{
+            '/a':(BuilderContext context) => MyPage(title:'Page A'),
+            '/b':(BuilderContext context) => MyPage(title:'Page B'),
+            '/c':(BuilderContext context) => MyPage(title:'Page C'),
+        }
+    ));
+}
+```
+
+
+
+###### 通过把路由名字push给一个`Navigatior`来跳转：
+
+```dart
+Navigatior.of(context).pushName('/b');
+```
+
+###### 使用`Navigatior`的push方法，将给定route添加到导航器的历史记录中。
+
+```dart
+Navigatior.push(context,MaterialPageRoute(builder:(BuilderContext context)=>UsualNavscreen())); // MaterialPageRoute为模板路由，它根据平台自适应替换整个页面
+```
+
+###### 获取路由跳转返回的结果
+
+`Navigatior`类不仅用来处理Flutter中的路由，还被用来获取刚push到栈中的路由返回的结果，通过await等待路由返回的结果，来达到获取跳转页面后返回的结果。
+
+`e.g.` 跳转到“位置”路由来让用户选择一个地点：
+
+```
+Map coordinates = await Navigatior.of(context).pushName('/location');
+```
+
+之后，在location路由中，一旦用户选择了地点，携带结果一起pop（）出栈：
+
+
+
+#### 手势检测及触摸事件处理
+
+- widget本身支持监听，直接传递函数到`onPressed`参数
+- 本身不支持事件监听，则可以使用`GestureDetector`，并传递函数到`onTap`参数
+
+###### 使用`GestureDetector`处理手势
+
+- 点击
+  - `onTapDown`  #特定位置轻触手势接触了屏幕
+  - `onTapUp` #在特定位置产生了一个轻触摸手势，并停止接触屏幕
+  - `onTap` #产生了一个轻触手势
+  - `onTapCancel` #触发了`onTapDown`但没能触发`tap`
+- 双击
+  - `onDoubleTap` #同一位置快速点击了两下屏幕
+- 长按
+  - `onLongPress` #用户在同一位置长时间接触屏幕
+- 垂直拖动
+  - `onVerticalDragStart` #用户接触了屏幕，并且可能会垂直移动
+  - `onVerticalDragUpdate` #接触了屏幕，并继续在垂直方向移动 
+  - `onVerticalDragEnd`   #之前接触了屏幕并垂直移动，并在停止接触屏幕前以某个垂直的速度移动
+- 水平拖动
+  - `onHorizontalDragStart` #用户接触了屏幕，并且可能会水平移动
+  - `onHorizontalDragUpdate` #接触了屏幕，并继续在水平方向移动 
+  - `onHorizontalDragEnd`   #之前接触了屏幕并水平移动的触摸点与屏幕分离
+
+
+
+#### 文字处理
+
+在Text widget上设置自定义字体
+
+- 在`ios`中，在项目中引入任意的`ttf`文件，并在`info.plist`中设置使用
+
+- 在`Android SDK`（Android O）中，创建Font资源并传递到`TextView`的`FontFamily`参数中
+
+- 在Flutter中只需要在文件夹中放置字体文件，并在`pubspec.yaml`中引用即可（类似添加图片）：
+
+  ```yaml
+  font:
+  	- family: MyCustomFont
+  	  fonts:
+  	    - asset: fonts/MyCustomFont.ttf
+  	    - style: italic
+  ```
+
+  
+
+#### 主题
+
+- Flutter实现了一套Material Design组件
+- 声明一个顶级widget，`MaterialApp`作为`App`的入口
+- 通过给`MaterialApp`传递一个`ThemeData`对象实现对任何组件定义颜色和样式
+
+
+
+#### 表单输入与富文本
+
+获取用户输入：
+
+- 在Android中可以通过`EditText`获取用户输入
+- 在`IOS`中可以通过`UITextField`获取用户输入
+- 在Flutter中可以使用`TextField`或`TextFormField`，然后通过`TextEditingController`来获取用户输入
+
+设置输入框的提示文字：
+
+- 通过向Text widget 的装饰构造器设置一个`InputDecoration`
+
+  ```dart
+  TextField(
+  	decoration:InputDecoration(hintText:"this is a hint")
+  )
+  ```
+
+
+显示验证错误信息：
+
+- 通过`InputDecoration`的`errorText`参数
+
+  ```dart
+  TextField(
+  	decoration:InputDecoration(errorText:"this is a error text")
+  )
+  ```
+
+
+
+#### 调用硬件与第三方服务
+
+- 访问`GPS`:`geolocator`
+- 相册与相机：image_picker
+- 本地存储（`IOS`的`UserDefaults`t&`Androi`d的`SharedPreferences`）插件：`Shared Preferences plugin`
+- 访问数据：`SQFlite`
+- 推送通知：`firebase_messaging`
+
+#### 构建&集成Native `SDK`/模块
+
+- Flutter的插件架构就像在Android中使用Event bus 一样：Flutter发出消息让接收者（`iOS/Android`）处理并将结果返回
+
+
+
+
+
+##### 项目结构
+
+```
+-projectName
+--android #
+--build #项目的构建输出目录
+-- ios #IOS部分的工程文件
+-- lib #项目中的Dart源文件
+--- src #包含其它源文件
+--- main.dart #自动生成的项目入口文件，类似RN的index.js文件、
+-- tets #测试相关文件
+-- pubspec.yaml #项目依赖配置文件类似于RN的package.json
+```
+
+##### 归档图片资源以及如何如何处理同分辨率
+
+- Android将resources和assets区别对待，但在Flutter中都会被作为assets处理，在Android上res/drawable-*文件夹中的资源都放在Flutter的assets文件夹中。
+- 与Android类似，ISO同样将images和assets作为不同的东西，而Flutter中只有assets。被放到`IOS`中`image.xcasset`文件夹下的资源在Flutter中被放到了assets文件夹中。
+- 在Flutter中assets可以是任何类型的文件，而不仅仅是图片。
+- 记得在`pubspec.yaml`文件中声明assets
+
+
+
+> 对于图片，Flutter像`IOS`一样，遵循了一个简单基于像素密度的格式。image assets可能是`1.0x 2.0x 3.0x`或是其它的任何倍数，这个`devicePixeRatio`表示了物理像素到单个逻辑像素的比率。
+
+Android不同像素密度的图片和Flutter的像素比率的对应关系:
+
+| ldpi    | 0.75x |
+| :------ | ----- |
+| mdpi    | 1.0x  |
+| hdpi    | 1.5x  |
+| xhdpi   | 2.0x  |
+| xxhdpi  | 3.0x  |
+| xxxhdpi | 4.0x  |
+
+
+
+
+
+#### 归档strings资源，以及如何处理不同语言？
+
+- `IOS`拥有一个`localizable.strings`文件管理字符串资源
+
+- 在Flutter最佳的做法是将strings资源作为静态字段保持在类中
+
+  ```dart
+  calss Strings{
+      static String welcomeMessage = 'welcome to here';
+  }
+  ```
+
+- 默认Flutter只支持美式英语字符串，若需支持其它语言，则引入flutter_localizations包。（也可能需要引入`intl`包来支持其它`i10n`机制，比如日期/时间格式化）。
+
+
+
+#### 添加项目依赖
+
+- Android中，在`Gradle`文件添加依赖
+- `IOS`中，在`Podfild`添加
+- RN中，在`package.json`中
+- Flutter使用Dart构建系统和Pub包管理器来处理依赖（找插件: Pub site）

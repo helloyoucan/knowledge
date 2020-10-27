@@ -70,11 +70,41 @@ flutter_module目录结构
 
 ##### 2.添加Flutter module依赖
 
+- 打开原生安卓工程
 
+- 添加flutter依赖配置:
+
+  - 打开Gradle Scripts/settings.gradle，添加代码
+
+    ```java
+    //...
+    setBinding(new Binding([gradle:this]))
+    evaluate(new File(
+           settingsDir.parentFile,
+           flutter_module/.android/include_flutter.groovy'
+    ))
+    ```
+
+  - 打开Gradle Scripts/build.gradle
+
+    ```
+    //...
+    dependencies {
+        // ...
+        implementation project(':flutter')
+    }
+    ```
+
+    
+
+  
 
 #####  3.在Java/Object-c中调用Flutter module
 
+调用方式：
 
+- 使用Flutter.createView API的方式
+- 使用FlutterFragment 的方式
 
 #####  4.编写Dart代码
 

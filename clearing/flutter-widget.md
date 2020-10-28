@@ -81,22 +81,33 @@ flutter_module目录结构
     setBinding(new Binding([gradle:this]))
     evaluate(new File(
            settingsDir.parentFile,
-           flutter_module/.android/include_flutter.groovy'
+           'flutter_module/.android/include_flutter.groovy'
     ))
     ```
 
   - 打开Gradle Scripts/build.gradle
 
     ```
+    android {
+    	// ...
+    	defaultConfig {
+    		//...
+    		minSdkVersion 16
+    	}
+	compileOptions {
+    		sourceCompatibility JavaVersion.VERSION_1_8
+          targetCompatibility JavaVersion.VERSION_1_8
+    	}
+    }
     //...
     dependencies {
         // ...
         implementation project(':flutter')
     }
     ```
-
     
-
+    
+  
   
 
 #####  3.在Java/Object-c中调用Flutter module
@@ -104,7 +115,24 @@ flutter_module目录结构
 调用方式：
 
 - 使用Flutter.createView API的方式
+
 - 使用FlutterFragment 的方式
+
+  ```java
+  // Android
+  FragmentTransaction tx  = getSupportFragmentManager().beginTransaction();
+  FlutterFragment fragment = FlutterFragment.withNewEngine().initialRoute("{name:'devio',dataList:['aa','bb','cc']}").build(); // 可向Flutter传字符串
+  tx.replace(R.id.someContainer, fragment);
+  tx.commit();
+  ```
+
+  ```dart
+  // Flutter
+  import 'dart:ui';
+  String params = window.defaultRouteName;// 可传递json字符串，再解析
+  ```
+
+  
 
 #####  4.编写Dart代码
 

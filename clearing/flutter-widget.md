@@ -216,11 +216,112 @@ myButton.setOnClickListener(new OnClickListener() {
 
 ####  6.热重启
 
+- 打开模拟器，或连接一个设备到电脑上
 
+- 关闭APP，然后运行`flutter attach`
+
+  ```shell
+  cd flutter_hybrid/flutter_module
+  flutter attach
+  ```
+
+  然后通过提示来进行热加载/热重启，在终端输入：
+
+  - r 热加载
+  - R 热重启
+  - h 获取帮助
+  - d 断开连接
 
 ####  7.调试Dart代码
 
-
+- 关闭APP
+- 点击AndroidStudio的Flutter Attach 按钮（需要安装过Flutter和Dart插件）
+- 启动APP
+- 然后可以调试普通项目那样来调试混合开发下的Dart代码
 
 ####  8.发布应用
+
+- 生成Android签名证书
+
+  签名证书需要一个证书用于为APP签名，生成签名证书可以Android Studio以可视化的方式生成，也可使用终端命令行的方式生成
+
+- 设置Gradle变量
+
+  1. 将签名证书copy到android/app目录下
+
+  2. 编辑~/.gridle/gridle.properties或../android/gridle.properties（一个是全局gradle.properties，一个是项目中的gridle.properties），根据需要选择，然后加入如下代码
+
+     ```properties
+     MYAPP_RELEASE_STORE_FILE=andrid_keystore.jks   #你的keystore文件路径,放到/app文件夹下
+     MYAPP_RELEASE_KEY_ALIAS=andrid_keystore    #keystore文件存放alias
+     MYAPP_RELEASE_STORE_PASSWORD=密码
+     MYAPP_RELEASE_KEY_PASSWORD=密码
+     ```
+
+  3. 在gradle配置中添加签名配置
+
+     编辑android/app/build.gradle文件添加如下代码：
+
+     ```
+     ...
+     android {
+     	...
+     	defauleConfig { ... }
+     	signingConfigs {
+     		release {
+     			storeFile file(MYAPP_RELEASE_STORE_FILE)
+     			storePassword MYAPP_RELEASE_STORE_PASSWORD
+     			keyAlias MYAPP_RELEASE_KEY_ALIAS
+     			keyPassword MYAPP_RELEASE_KEY_PASSWORD
+     		}
+     	}
+     	buildTypes {
+     		release {
+     			...
+     			signingConfig signingCOnfigs.release
+     		}
+     	}
+     
+     }
+     ```
+
+  4. 签名打包APK
+
+     terminal 进入项目下的android目录，运行如下代码：
+
+     ```shell
+     ./gradlew assembleRelease
+     ```
+
+     
+
+### Flutter与Native通信机制
+
+- 通过`Channel`来完成通讯
+
+  ![](..\images\Dart\channel通讯.png)
+
+  > 消息的传递是异步的
+
+- Chainnel所支持的数据类型对照表
+
+  ![](..\images\Dart\channel通讯所支持的数据类型对照表.png)
+
+
+
+##### Flutter定义三种不同类型的Channel
+
+- BasicMessageChannel : 用于传递字符串和半结构化的信息，持续通讯，收到消息后可以回复此次消息；如：Native 将遍历到的文件信息陆续传递到Dart，再比如：Flutter将从服务的陆续获取到信息交给Native，Native处理完返回等；
+- MethodChannel ：用于传递方法调用（method invocation）一次同学：如Flutter调用Native拍照
+- EventChannel ：用于数据流（event steams）的通讯，持续通讯，收到消息后无法回复此消息，通过长用于Native向Dart的通讯：如：手机电量变化，网络连接变化，陀螺仪，传感器等；
+
+
+
+
+
+#### Dart端
+
+#### Android端
+
+
 

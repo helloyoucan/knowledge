@@ -297,7 +297,7 @@ myButton.setOnClickListener(new OnClickListener() {
 
 ### Flutter与Native通信机制
 
-- 通过`Channel`来完成通讯
+- 通过`Channel`来完成通讯（传输二进制，故有编解码过程）
 
   ![](..\images\Dart\channel通讯.png)
 
@@ -309,19 +309,146 @@ myButton.setOnClickListener(new OnClickListener() {
 
 
 
-##### Flutter定义三种不同类型的Channel
+#### Flutter定义三种不同类型的Channel
 
 - BasicMessageChannel : 用于传递字符串和半结构化的信息，持续通讯，收到消息后可以回复此次消息；如：Native 将遍历到的文件信息陆续传递到Dart，再比如：Flutter将从服务的陆续获取到信息交给Native，Native处理完返回等；
 - MethodChannel ：用于传递方法调用（method invocation）一次同学：如Flutter调用Native拍照
 - EventChannel ：用于数据流（event steams）的通讯，持续通讯，收到消息后无法回复此消息，通过长用于Native向Dart的通讯：如：手机电量变化，网络连接变化，陀螺仪，传感器等；
 
+##### BasicMessageChannel的用法
+###### Dart端
+
+> 构造方法原型
+
+```dart
+const BasicMessageChannel(this.name,this.codec);
+```
+
+- String name # Channel的名字，要和Native端保持一致
+- MessageCodec<T> codec #消息的编解码器，要和Native端保持一致，有四种类型的实现，具体超快Native端的介绍
+
+
+
+> setMessageHandler方法原型
+
+```dart
+void setMessageHandler(Future<T> handler(T message));
+```
+
+- Future<T> handler(T message) #消息处理器，配合BinarMessager完成消息的处理
+
+在创建好BasicMessageChannel后，如果让其接收Native发来的消息，则需要调用它的setMessageHandler方法为其设置一个消息处理器
+
+
+
+>send方法原型
+
+```dart
+Future<T> send(T message)
+```
+
+- T message #要传递给Native的具体消息
+- Future<T> #消息发出去后，收到Native回复的回调函数
 
 
 
 
-#### Dart端
 
-#### Android端
+在创建好BasicMessageChannel后，如果要向Native发送消息，可以调用它的send方法向Native传递数据。
+
+```dart
+import 'package:flutter/services.dart';
+  ...
+  String showMessage = '';
+  static const BasicMessageChannel _basicMessageChannel =
+      const BasicMessageChannel('BasicMessageChannelPlugin',
+          StringCodec()); //StringCodec()意思是发送String类型的消息
+
+// 在构造函数里初始化BasicMessageChannel
+  _MyHomePageState() {
+    // 使用BasicMessageChannel接受来自Native的消息，并向Native回复
+    _basicMessageChannel.setMessageHandler((message) => Future<String>(() {
+          setState(() {
+            showMessage = message;
+          });
+          return "收到Native的消息：" + message;
+        }));
+  }
+
+ Future<void> sendMessageToNative() async {
+    //使用BasicMessageChannel向Native发送消息，并接受Native的回复
+    String response;
+    try {
+      response = await _basicMessageChannel.send("Flutter发出的1消息");
+    } catch (e) {
+      print(e);
+    }
+  }
+```
 
 
+
+##### MethodChannel的用法
+
+###### Dart端
+
+> 构造方法原型
+
+```dart
+const MethodChannel(this.name,[this,codec = const StandardMethodCodec()])
+```
+
+- String name # Channel的名字，要和Native端保持一致
+- MessageCodec<T> codec #消息的编解码器，默认是StandardMethodCodec，要和Native端保持一致
+
+> invokeMethod 方法原型
+
+```dart
+Future<T> invokeMethod<T>(String mtehod,[ dynamic argments ])
+```
+
+- String name # 要调用Native的方法名
+- [ dynamic argments ] #调用Native方法传递的参数，可不传
+
+
+
+初始化一个广播流用于channel中接收数据，它返回一个Stream，接下来需要调用Steam的listen1方法来完成注册，另外需要在页面销毁时调用Stream的cancel方法来取消监听；
+
+```dart
+import 'dart:async';
+
+...
+String showMessage = '';
+static const EventChannel _eventChannelPlugin = EventChannel('EventChannelPlugin');
+
+StreamSubscription _streamSubscription;
+void initState() {
+  _streamSubscription = _eventChannelPlugin
+      .receiveBroadcastStream()
+      .listen(_onToDart, onError: _onToDartError);
+  super.initState();
+}
+
+void _onToDart(message) {
+  setState(() {
+    showMessage = message;
+  });
+}
+
+  void _onToDartError(error) {
+    print(error);
+  }
+
+@override
+void dispose() {
+    // widget销毁1时取消监听
+  if (_streamSubscription != null) {
+    _streamSubscription.cancel();
+    _streamSubscription = null;
+  }
+  super.dispose();
+}
+
+...
+```
 

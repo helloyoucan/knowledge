@@ -312,7 +312,7 @@ myButton.setOnClickListener(new OnClickListener() {
 #### Flutter定义三种不同类型的Channel
 
 - BasicMessageChannel : 用于传递字符串和半结构化的信息，持续通讯，收到消息后可以回复此次消息；如：Native 将遍历到的文件信息陆续传递到Dart，再比如：Flutter将从服务的陆续获取到信息交给Native，Native处理完返回等；
-- MethodChannel ：用于传递方法调用（method invocation）一次同学：如Flutter调用Native拍照
+- MethodChannel ：用于传递方法调用（method invocation）一次通讯：如Flutter调用Native拍照
 - EventChannel ：用于数据流（event steams）的通讯，持续通讯，收到消息后无法回复此消息，通过长用于Native向Dart的通讯：如：手机电量变化，网络连接变化，陀螺仪，传感器等；
 
 ##### BasicMessageChannel的用法
@@ -350,10 +350,6 @@ Future<T> send(T message)
 - T message #要传递给Native的具体消息
 - Future<T> #消息发出去后，收到Native回复的回调函数
 
-
-
-
-
 在创建好BasicMessageChannel后，如果要向Native发送消息，可以调用它的send方法向Native传递数据。
 
 ```dart
@@ -388,6 +384,102 @@ import 'package:flutter/services.dart';
 
 
 
+###### Native端：
+
+> 构造方法原型
+
+```java
+BasicMessageChannel(BinaryMessenger messenger, string name, MessageCodec<T> codec)
+```
+
+- BinaryMessenger messenger -消息信使，是消息的发送与接收的工具;
+- String name - Channel的名字，也是其唯一标识符;
+- MessageCodec<T> codec -消息的编解码器，它有几种不同类型的实现:
+  - BinaryCodec -最为简单的种Codec, 因为其返回值类型和入参的类型相同，均为二进制格式(Android中为ByteBuffer, iOs中为NSData) 。实际上，BinaryCodec在编解码过程中什么都没做，只是原封不动将二进制数据消息返回而已。或许你会因此觉得BinaryCodec没有意义，但是在某些情况下它非常有用，比如使用BinaryCodec可以使传递内存数据块时在编解码阶段免于内存拷贝:
+  - StringCodec -用于字符串与二进制数据之间的编解码，其编码格式为UTF-8;
+  - JSONMessageCodec -用于基础数据与二进制数据之间的编解码，其支持基础数据类型以及列表、字典。其在iOS端使用了NSJSONSerialization作为序列化的工具，而在
+  - StandardMessaneCordec -是BasiaMessaneChannel的默认编解码器其支持基础数据类型、二进制数据、列表、字典、其工作原理；
+
+> setMessageHandler方法原型
+
+```java
+void setMessageHandLer(Bas icMessageChannel. MessageHandLer<T> handler)
+```
+
+- BasicMessageChannel.MessageHandler<T> handler -消息处理器，配合
+  BinaryMes senger完成消息的处理;
+
+
+
+在创建好BasicMessageChannel后，如果要让其接收Dart发来的消息，则需要调用它的
+setMes sageHandler方法为其设置-个消息处理器。
+
+> BasicMessageChannel.MessageHandler原型
+
+```java
+public interface Mes sageHandler<T> {
+	void onMessage(T var1, Bas icMessageChannel. Reply<T> var2);
+}
+```
+
+- onMessage(T varl, BasicMessageChannel. Reply<T> var2) -用于接受消息，var1是消
+  息内容，var2是回复此消息的回调函数;
+
+
+
+> send方法原型
+
+```java
+void send(T message)
+void send(T message, Bas icMessageChannel. Reply<T> callback)
+```
+
+- T  message -要传递给Dart的具体信息;
+- Bas icMessageChannel. Reply<T> callback -消息发出去后，收到Dart的回复的回调函
+  数;
+
+在创建好BasicMessageChannel后，如果要向Dart发送消息，可以调用它的send方法向Dart传递
+数据。
+
+```java
+public class BasicMessageChanneLPlugin implements BasicMessageChannel.MessageHandler<String>{
+    private final Activity activity;
+    private final Bas icMes sageChannel<string> messageChannel;
+    
+	static Bas icMessageChanne lPlugin registerWith(FlutterView flutterView) {
+		return new BasicMessageChanneLPlugin(flutterView);
+    }
+	private BasicMessageChannelPlugin(F lutterView flutterView) {
+		this.activity = (Activity) flutterView. getContext();
+		this.messageChannel = new Bas icMessageCfannel<>(flutterView,"BasicMessageChannelP
+		//设置消息处理器，处理来自Dart的消息
+		messageChannel. setMes sageHandler (this);
+   }
+	@Override
+	public void onMessage(String s, BasicMessageChannel.Reply<String> reply) {// 处理Dart发习
+		reply. reply("Bas icMessageChannel收到:”+ s);// 可以通过reply进行回复
+		if (activity instanceof IShowMessage) {
+			((IShowMessage) act 1vity) . onShowMessage(s);
+        }
+		Toast.makeText(activity,s,Toast.LENGTH_ SHORT).show();
+    }
+                     
+    /** *向Dart发送消息，并接受Dart的反馈水
+    * @param message 要给Dart发送的消息内容寒
+    * @param ca I
+    **/
+    void send(String message, BasicMessageChannel.Reply<String> callback) {
+    	messageChannel. send (message, callback) ;
+    }
+    @override
+    public void reply(String s) {
+
+    }
+
+```
+
+
+
 ##### MethodChannel的用法
 
 ###### Dart端
@@ -412,12 +504,54 @@ Future<T> invokeMethod<T>(String mtehod,[ dynamic argments ])
 
 
 
-初始化一个广播流用于channel中接收数据，它返回一个Stream，接下来需要调用Steam的listen1方法来完成注册，另外需要在页面销毁时调用Stream的cancel方法来取消监听；
+```dart
+import 'package:flutter/services.dart';
+
+...
+  static const MethodChannel _methodChannelPlugin = const MethodChannel('methodChannelPlugin');
+  
+Future<void> sendOnceMessageToNative() async {
+ 	String response;
+ 	try{
+ 		response = await _methodChannelPlugin.invokeMethod('send','test message');
+	}on PlatformException catch(e){
+ 		print(e);
+ 	}
+}
+```
+
+
+
+##### EventChannel
+
+
+
+###### Dart端
+
+> 构造方法原型
+
+```dart
+const EventChannel(this.name,[ this.codec = const StandardMethodCodec()]);
+```
+
+- String name # Channel的名字，要和Native端保持一致
+- MessageCodec<T> codec #消息的编解码器，默认是StandardMethodCodec，要和Native端保持一致
+
+> receiveBroadcastStream 方法原型
+
+```dart
+Stream<dynaimic> receiveBroadcastStream([dynamic arguments]);
+```
+
+- dynamic arguments #监听事件时向Native传递的数据；
+
+
+
+初始化一个广播流用于从channel中接收数据，它返回一个Steam接下来需要调用Steam的listen方法来完成注册，另外需要在也买你销毁时调用Steam的cancel方法来取消监听：
 
 ```dart
 import 'dart:async';
 
-...
 String showMessage = '';
 static const EventChannel _eventChannelPlugin = EventChannel('EventChannelPlugin');
 
@@ -448,7 +582,7 @@ void dispose() {
   }
   super.dispose();
 }
-
-...
 ```
+
+
 

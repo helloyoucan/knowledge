@@ -27,8 +27,8 @@
 - RenfreshIndicator 实现下拉刷新
 - ScrollController监听列表滚动位置，实现加载更多（ListVIew的controller参数）
 - FractionallySizedBox #内容撑满整个高度
-
-
+- PhysicalModel #实现圆角，并且子元素的超出隐藏
+- MediaQuery.of(context).size.width 获取屏幕宽度
 
 
 

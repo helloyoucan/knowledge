@@ -300,3 +300,7 @@ myButton.setOnClickListener(new OnClickListener() {
 
 
 
+## Package类型
+
+- Dart包
+- 插件包（包括安卓，ios，dart的代码）

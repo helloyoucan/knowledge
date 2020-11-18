@@ -26,7 +26,8 @@
 - GridView .count 网格布局
 - RenfreshIndicator 实现下拉刷新
 - ScrollController监听列表滚动位置，实现加载更多（ListVIew的controller参数）
-- FractionallySizedBox #内容撑满整个高度
+- FractionallySizedBox #内容撑满整个高度（垂直方向）
+- Expanded #水平方向撑满父布局
 
 
 

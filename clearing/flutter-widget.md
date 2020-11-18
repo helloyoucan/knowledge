@@ -381,3 +381,45 @@ myButton.setOnClickListener(new OnClickListener() {
 - 流畅性优化
 - 内存优化
 
+
+
+#### Android打包发布指南（可参考官网）
+
+- 添加APP名称和快照
+  - AndroidManifest.xml
+  - main.dart
+- 检查和配置build.gradle文件
+  - applicationId
+  - versionCode&versionName
+  - minSdkVersion&targetSdkVersion
+- 添加APP启动图标
+- 签名APP
+  - 在Android studio 创建证书
+  - 使用证书
+- 配置APK混淆
+- 构建一个release包
+- 发布到Android市场
+
+
+
+#### IOS打包发布指南
+
+- 申请IOS企业级或个人开发者账号
+- 在APP Store Connect注册你的APP
+- 为App注册Bundle ID
+- 添加APP名字
+- 设置Bundle ID
+- 添加APP启动图标
+- 设置签名账号
+- 创建存档
+  - flutter build ios
+  - 这一步将创建一个构建存档，并上传到App Store Connect
+
+
+
+#### Flutter升级与适配指南
+
+- 更新FlutterSDK和packages
+- 切换Flutter channels(只更新FlutterSDK)
+- 只更新包
+- 适配

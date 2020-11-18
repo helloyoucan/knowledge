@@ -28,8 +28,11 @@
 - ScrollController监听列表滚动位置，实现加载更多（ListVIew的controller参数）
 - FractionallySizedBox #内容撑满整个高度（垂直方向）
 - Expanded #水平方向撑满父布局
-
-
+- FractionallySizedBox #内容撑满整个高度
+- PhysicalModel #实现圆角（裁切），并且子元素的超出隐藏
+- MediaQuery.of(context).size.width 获取屏幕宽度
+- LimitedBox #设置最大高度和最大宽度，可用于文字超出显示省略号
+- flutter_staggered_grid_view #第三方库，实现瀑布流
 
 
 
@@ -300,4 +303,81 @@ myButton.setOnClickListener(new OnClickListener() {
 
 
 
+
+## Package类型
+
+- Dart包
+- 插件包（包括安卓，ios，dart的代码）
+
+
+
+##全面屏适配
+
+#### Ios:
+
+###### 1.使用Scaffold的appBar和bottomNavigationBar不需要额外适配，Scaffold框架内部已处理适配
+
+###### 2.手动适配
+
+- 采用SafeArea来包裹页面，SafeArea是用于适配全免面屏的widget。（相对简单，但不够灵活）
+- 使用MediaQuery.of(context).padding获取屏幕周围的padding，然后根据padding自己实现对安全区域的控制。（相对复杂吗，但灵活性高，MediaQuery.of(context).padding需要在MaterialApp内此才能使用）
+
+#### Android:
+
+> 除了和ios一样的两种方式，还需要做一些处理
+
+当显示导航栏时此区间是整个屏幕区间减去导航栏的区间，当隐藏导航栏时就是整个屏幕的区间。按Google的要求如果应用未做相应适配此区间长宽比必
+须是在1.3333和1.86之间。
+
+当设备屏幕足够大时，如三星S8(18.5:9),此时除去导航栏应用显示尺寸的长宽比还是大于1.86的,
+为了满足Google CDD的要求，应用就无法按之前的全屏进行显示，就会出现黑边。
+
+
+
+应用通过如”下两种方法修改AndroidManifest . xml均可以默认全屏显示:
+
+1. 针对Activity添加android:resizeableActivity = "true",此设置只针对Activity生效，且增加了此
+   属性该activity也会支持分屏显示;
+2. 设置targetSdkVersion>= =26，也就是O版本; 
+
+
+
+**应用通过如”下两种方式均可以设置应用支持的最大显示比例。如果应用设置的支持最大比例是2，而
+设备实际比例是2.5，则还是无法全屏显示，会出现黑边:**
+
+1. 添加android:MaxAspectRatio，此设置项可以针对Application和Activity生效，对应的是应用
+   支持的最大比例，此属性需要基于O版本开发环境才可以编译通过;
+2. 添加android. max_ aspect :
+
+```xml
+ <!--适配全面屏-->
+<meta-data
+	android:name="android.max_ aspect"
+	android:value="2.1" />
+```
+
+应用适配建议采用meta-data的方式，具体可以参考Android Developers Blog相对原有16:9设备,
+当前更大屏的设备无论是FHD还是2K设备,短边的像素、density的取值都是一 样的，只是长边变长
+了，所以对于应用适配的资源和原有16:9的设备基本- 致。
+
+对于列表形式的应用，如:微信、网易新闻等，只是显示的内容变多，基本无影响;对于整屏的应
+用，应用为了保证多种屏幕的适配，需遵循Google的适配建议，可以参考Google官网页面中的最佳
+做法章节进行修改适配;对于使用整幅图片作为背景时需注意图片的填充方式，否则可能会无法填
+充整个屏幕。如:使用背景是用ImageView建议将其scaleType设置为CENTER_ .CROP, 其意义是:
+按比例扩大图片的size居中显示，使得图片长(宽)等于或大于View的长(宽)。
+
+
+
+
+
+
+
+#### Flutter项目优化
+
+- 代码优化
+  - 冗余代码
+  - 封装
+- 包大小
+- 流畅性优化
+- 内存优化
 

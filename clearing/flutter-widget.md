@@ -33,6 +33,7 @@
 - MediaQuery.of(context).size.width 获取屏幕宽度
 - LimitedBox #设置最大高度和最大宽度，可用于文字超出显示省略号
 - flutter_staggered_grid_view #第三方库，实现瀑布流
+- GestureDetector #添加点击事件的widget
 
 
 

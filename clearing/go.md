@@ -1,4 +1,4 @@
-https://www.w3cschool.cn/go/go-variables.html
+https://www.runoob.com/go/go-tutorial.html
 
 ## 语言基础组成
 
@@ -338,7 +338,110 @@ func main() {
 
 ### 函数的用法
 
+| 函数用法                                                     | 描述                                     |
+| :----------------------------------------------------------- | :--------------------------------------- |
+| [函数作为另外一个函数的实参](https://www.runoob.com/go/go-function-as-values.html) | 函数定义后可作为另外一个函数的实参数传入 |
+| [闭包](https://www.runoob.com/go/go-function-closures.html)  | 闭包是匿名函数，可在动态编程中使用       |
+| [方法](https://www.runoob.com/go/go-method.html)             | 方法就是一个包含了接受者的函数           |
 
 
 
+### 变量作用域
 
+> 作用域为已声明标识符所表示的常量，类型，变量，函数或包在源代码中的作用域范围。
+
+Go语言中的变量可以在三个地方声明：
+
+- 函数内定义的变量称为**局部变量**
+- 函数外定义的变量称之为**全局变量**
+- 函数定义中的变量称之为**形式参数**
+
+###### 初始化局部和全局变量
+
+| 数据类型  | 初始化默认值 |
+| :-------- | :----------- |
+| `int`     | 0            |
+| `float32` | 0            |
+| `pointer` | nil          |
+
+
+
+## 数组
+
+```go
+var variable_name [SIZE] variable_type
+//例如
+var balance [10] float32
+```
+
+###### 初始化数组
+
+```go
+var balance = [5]float32{1000.0, 2.0, 3.4, 7.0, 50.0}
+```
+
+初始化数组中 {} 中的元素个数不能大于 [] 中的数字。
+
+如果忽略 [] 中的数字不设置数组大小，Go 语言会根据元素的个数来设置数组的大小
+
+```go
+var balance = [...]float32{1000.0, 2.0, 3.4, 7.0, 50.0}
+```
+
+
+
+## 指针
+
+一个**指针变量**指向了一个**值**的**内存地址**
+
+```go
+var var_name *var-type
+```
+
+###### 使用指针
+
+- 定义指针变量
+- 为指针变量赋值
+- 访问指针变量中指向地址的值
+
+```GO
+package main
+import "fmt"
+func main() {
+   var a int= 20   /* 声明实际变量 */
+   var ip *int        /* 声明指针变量 */
+   ip = &a  /* 指针变量的存储地址 */
+   fmt.Printf("a 变量的地址是: %x\n", &a  )
+   /* 指针变量的存储地址 */
+   fmt.Printf("ip 变量储存的指针地址: %x\n", ip )
+   /* 使用指针访问值 */
+   fmt.Printf("*ip 变量的值: %d\n", *ip )
+}
+```
+
+###### 空指针
+
+- 当一个指针被定义后没有分配到任何变量时，它的值为nil
+- nil指针也被称为空指针
+- nil在概念上和它语言的null, None, nil, NULL一样，都指代为零值或空值
+- 一个指针变量通常缩写为`ptr`
+
+```go
+package main
+import "fmt"
+func main() {
+   var  ptr *int
+   fmt.Printf("ptr 的值为 : %x\n", ptr  ) //ptr 的值为 : 0
+}
+```
+
+空指针判断
+
+```go
+if(ptr != nil)     /* ptr 不是空指针 */
+if(ptr == nil)    /* ptr 是空指针 */
+```
+
+
+
+https://www.runoob.com/go/go-structures.html

@@ -34,6 +34,7 @@
 - LimitedBox #设置最大高度和最大宽度，可用于文字超出显示省略号
 - flutter_staggered_grid_view #第三方库，实现瀑布流
 - GestureDetector #添加点击事件的widget
+- 在BoxDecoration同时设置borderRadius和border时，border不能设置单独的一边或多边，必须设置4条边，不然报错
 
 
 

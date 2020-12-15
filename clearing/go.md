@@ -444,4 +444,44 @@ if(ptr == nil)    /* ptr 是空指针 */
 
 
 
-https://www.runoob.com/go/go-structures.html
+## 结构体
+
+结构体定义需要使用`type`和`struct`语句。`struct`语句定义一个新的数据类型，结构体中有一个或多个成员。type语句设定了机构体的名称。
+
+```go
+type struct_variable_type struct {
+   member definition
+   member definition
+   ...
+   member definition
+}
+```
+
+一旦定义了结构体类型，它就能用于变量的声明：
+
+```go
+variable_name := structure_variable_type {value1, value2...valuen}
+或
+variable_name := structure_variable_type { key1: value1, key2: value2..., keyn: valuen}
+```
+
+使用方式：
+
+```go
+package main
+import "fmt"
+type Books struct {
+   title string
+   author string
+   subject string
+   book_id int
+}
+func main() {
+    // 创建一个新的结构体
+    fmt.Println(Books{"Go 语言", "www.runoob.com", "Go 语言教程", 6495407})
+    // 也可以使用 key => value 格式
+    fmt.Println(Books{title: "Go 语言", author: "www.runoob.com", subject: "Go 语言教程", book_id: 6495407})
+    // 忽略的字段为 0 或 空
+   fmt.Println(Books{title: "Go 语言", author: "www.runoob.com"})
+}
+```

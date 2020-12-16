@@ -380,4 +380,290 @@ func printSlice(x []int){
 
 
 
-https://www.runoob.com/go/go-range.html
+## 语言范围（Range）
+
+- rang关键字用于for循环中迭代数组（array）、切片（slice）、通道（channel）或集合（map）的元素。
+
+- 在数组和切片中它返回元素的索引和索引对应的值
+
+- 在集合中返回key-value对。
+
+```go
+package main
+import "fmt"
+func main() {
+    //这是我们使用range去求一个slice的和。使用数组跟这个很类似
+    nums := []int{2, 3, 4}
+    sum := 0
+    for _, num := range nums {
+        sum += num
+    }
+    fmt.Println("sum:", sum)
+    //在数组上使用range将传入index和值两个变量。上面那个例子我们不需要使用该元素的序号，所以我们使用空白符"_"省略了。有时侯我们确实需要知道它的索引。
+    for i, num := range nums {
+        if num == 3 {
+            fmt.Println("index:", i)
+        }
+    }
+    //range也可以用在map的键值对上。
+    kvs := map[string]string{"a": "apple", "b": "banana"}
+    for k, v := range kvs {
+        fmt.Printf("%s -> %s\n", k, v)
+    }
+    //range也可以用来枚举Unicode字符串。第一个参数是字符的索引，第二个是字符（Unicode的值）本身。
+    for i, c := range "go" {
+        fmt.Println(i, c)
+    }
+    /*
+    输出：
+    sum: 9
+    index: 1
+    a -> apple
+    b -> banana
+    0 103
+    1 111
+    */
+}
+```
+
+
+
+## Map（集合）
+
+- 无序的键值对的集合
+- 通过key来快速检索数据，key类似于索引，指向数据的值
+- 一种集合，可被迭代，是无序的，无法决定返回的顺序，因为Map是通过hash表来实现的
+
+可使用内建函数make或map关键字来定义
+
+```go
+/* 声明变量，默认 map 是 nil */
+var map_variable map[key_data_type]value_data_type
+
+/* 使用 make 函数 */
+map_variable := make(map[key_data_type]value_data_type)
+```
+
+不初始化map，会创建一个nil ma，nil map不能用了存放键值对
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    var countryCapitalMap map[string]string /*创建集合 */
+    countryCapitalMap = make(map[string]string)
+
+    /* map插入key - value对,各个国家对应的首都 */
+    countryCapitalMap [ "France" ] = "巴黎"
+    countryCapitalMap [ "Italy" ] = "罗马"
+    countryCapitalMap [ "Japan" ] = "东京"
+    countryCapitalMap [ "India " ] = "新德里"
+
+    /*使用键输出地图值 */
+    for country := range countryCapitalMap {
+        fmt.Println(country, "首都是", countryCapitalMap [country])
+    }
+
+    /*查看元素在集合中是否存在 */
+    capital, ok := countryCapitalMap [ "American" ] /*如果确定是真实的,则存在,否则不存在 */
+    /*fmt.Println(capital) */
+    /*fmt.Println(ok) */
+    if (ok) {
+        fmt.Println("American 的首都是", capital)
+    } else {
+        fmt.Println("American 的首都不存在")
+    }
+}
+```
+
+###### delete() 
+
+用于删除集合的元素，参数为key
+
+
+
+## 类型转换
+
+用于将一种数据类型的变量转换为另外一种类型的变量。**go不支持隐式转换类型**
+
+```go
+type_name(expression)
+```
+
+type_name 为类型，expression 为表达式。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+   var sum int = 17
+   var count int = 5
+   var mean float32
+   
+   mean = float32(sum)/float32(count)
+   fmt.Printf("mean 的值为: %f\n",mean)
+}
+```
+
+
+
+## 接口
+
+go 提供了另外一种数据类型，即接口，它把所有的具有共性的方法定义在一起，任何其它类型只需要实现了这些方法就是实现了这个接口。
+
+```go
+/* 定义接口 */
+type interface_name interface {
+   method_name1 [return_type]
+   method_name2 [return_type]
+   method_name3 [return_type]
+   ...
+   method_namen [return_type]
+}
+
+/* 定义结构体 */
+type struct_name struct {
+   /* variables */
+}
+
+/* 实现接口方法 */
+func (struct_name_variable struct_name) method_name1() [return_type] {
+   /* 方法实现 */
+}
+...
+func (struct_name_variable struct_name) method_namen() [return_type] {
+   /* 方法实现*/
+}
+```
+
+例子：
+
+```go
+package main
+
+import ("fmt")
+
+type Phone interface {
+    call()
+}
+
+type NokiaPhone struct {}
+
+func (nokiaPhone NokiaPhone) call() {
+    fmt.Println("I am Nokia, I can call you!")
+}
+
+type IPhone struct {}
+
+func (iPhone IPhone) call() {
+    fmt.Println("I am iPhone, I can call you!")
+}
+
+func main() {
+    var phone Phone
+    phone = new(NokiaPhone) //使用new函数创建一个NokiaPhone类型的匿名变量
+    phone.call()
+    phone = new(IPhone)
+    phone.call()
+
+}
+```
+
+
+
+## 错误处理
+
+通过内置的错误接口提供了非常简单的错误处理机制。
+
+error类型是一个接口类型。
+
+```go
+type error interface {
+    Error() string
+}
+```
+
+在编码中通过实现error接口类型来生成错误信息。
+
+函数通常在最后的返回值中返回错误信息。
+
+使用`errors.New`可返回一个错误信息。
+
+```go
+func Sqrt(f float64) (float64, error) {
+    if f < 0 {
+        return 0, errors.New("math: square root of negative number")
+    }
+    // 实现
+}
+```
+
+例子：
+
+```go
+package main
+
+import (
+    "fmt"
+)
+
+// 定义一个 DivideError 结构
+type DivideError struct {
+    dividee int
+    divider int
+}
+
+// 实现 `error` 接口
+func (de *DivideError) Error() string {
+    strFormat := `
+    Cannot proceed, the divider is zero.
+    dividee: %d
+    divider: 0
+`
+    return fmt.Sprintf(strFormat, de.dividee)
+}
+
+// 定义 `int` 类型除法运算的函数
+func Divide(varDividee int, varDivider int) (result int, errorMsg string) {
+    if varDivider == 0 {
+            dData := DivideError{
+                    dividee: varDividee,
+                    divider: varDivider,
+            }
+            errorMsg = dData.Error()
+            return
+    } else {
+            return varDividee / varDivider, ""
+    }
+
+}
+
+func main() {
+
+    // 正常情况
+    if result, errorMsg := Divide(100, 10); errorMsg == "" {
+            fmt.Println("100/10 = ", result)
+    }
+    // 当除数为零的时候会返回错误信息
+    if _, errorMsg := Divide(100, 0); errorMsg != "" {
+            fmt.Println("errorMsg is: ", errorMsg)
+    }
+
+}
+/*
+输出：
+    100/10 =  10
+    errorMsg is:  
+    Cannot proceed, the divider is zero.
+    dividee: 100
+    divider: 0
+*/
+```
+
+
+
+https://www.runoob.com/go/go-concurrent.html

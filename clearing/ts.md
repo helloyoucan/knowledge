@@ -1,8 +1,10 @@
-## 变量声明
+### 变量声明
 
-#### var声明
+#### 变量声明
 
-##### 作用域规则
+##### var声明
+
+作用域规则
 
 `var`声明可以在包含它的函数，模块，命名空间或全局作用域内部任何位置被访问
 
@@ -18,7 +20,7 @@ f(true);  // returns '10'
 f(false); // returns 'undefined'
 ```
 
-##### 多次声明同一个变量并不会报错
+###### 多次声明同一个变量并不会报错
 
 ```typescript
 function sumMatrix(matrix: number[][]) {
@@ -33,7 +35,7 @@ function sumMatrix(matrix: number[][]) {
 }
 ```
 
-##### 捕获变量怪异之处
+###### 捕获变量怪异之处
 
 ```typescript
 for (var i = 0; i < 10; i++) {
@@ -56,9 +58,9 @@ for (var i = 0; i < 10; i++) {
 
 
 
-#### let声明
+##### let声明
 
-##### 块级作用域
+###### 块级作用域
 
 > 当用let声明一个变量，它使用的是词法作用域或块作用域。
 >
@@ -102,7 +104,7 @@ let a;
 
 
 
-##### 重定义及屏蔽
+###### 重定义及屏蔽
 
 ```typescript
 let x = 10;
@@ -152,7 +154,7 @@ function sumMatrix(matrix: number[][]) {
 
 
 
-##### 块级作用域变量的获取
+###### 块级作用域变量的获取
 
 每次进入一个作用域时，它创建了一个变量的 *环境*。 就算作用域内代码已经执行完毕，这个环境与其捕获的变量依然存在。
 
@@ -197,9 +199,11 @@ for (let i = 0; i < 10 ; i++) {
 
 赋值后不能再改变,实际上`const`变量的内部状态是可修改的。
 
+#### 解构
 
+##### 解构数组
 
-#### 结构数组
+解构赋值
 
 ```typescript
 let input = [1, 2];
@@ -208,4 +212,107 @@ console.log(first); // outputs 1
 console.log(second); // outputs 2
 ```
 
-https://www.tslang.cn/docs/handbook/variable-declarations.html
+交互变量的值
+
+```typescript
+[first, second] = [second, first];
+```
+
+函数参数
+
+```typescript
+function f([first, second]: [number, number]) {
+    console.log(first);
+    console.log(second);
+}
+f(input);
+```
+
+剩余变量
+
+```typescript
+let [first, ...rest] = [1, 2, 3, 4];
+console.log(first); // outputs 1
+console.log(rest); // outputs [ 2, 3, 4 ]
+```
+
+```typescript
+let [first] = [1, 2, 3, 4];
+console.log(first); // outputs 1
+```
+
+```typescript
+let [, second, , fourth] = [1, 2, 3, 4];
+```
+
+##### 对象解构
+
+```typescript
+let o = { a: "foo", b: 12,c: "bar"};
+let { a, b } = o;
+```
+
+```typescript
+({ a, b } = { a: "baz", b: 101 });
+```
+
+剩余变量
+
+```typescript
+let { a, ...passthrough } = o;
+let total = passthrough.b + passthrough.c.length;
+```
+
+##### 属性重命名
+
+```typescript
+let { a: newName1, b: newName2 } = o;
+```
+
+##### 默认值
+
+```typescript
+function keepWholeObject(wholeObject: { a: string, b?: number }) {
+    let { a, b = 1001 } = wholeObject;
+}
+```
+
+##### 函数声明
+
+```typescript
+type C = { a: string, b?: number }
+function f({ a, b }: C): void {
+    // ...
+}
+```
+
+解构属性上给予一个默认或可选的属性用来替换主初始化列表
+
+```typescript
+function f({ a, b = 0 } = { a: "" }): void {
+    // ...
+}
+f({ a: "yes" }); // ok, default b = 0
+f(); // ok, default to {a: ""}, which then defaults b = 0
+f({}); // error, 'a' is required if you supply an argument
+/* 解构表达式要尽量保持小而简单。*/
+```
+
+##### 展开
+
+展开操作符正与解构相反。 它允许你将一个**数组**展开为另一个数组，或将一个**对象**展开为另一个对象
+
+```typescript
+let first = [1, 2];
+let second = [3, 4];
+// 展开操作创建了 first和second的一份浅拷贝。 它们不会被展开操作所改变。
+let bothPlus = [0, ...first, ...second, 5];
+```
+
+- 展开对象后面的属性会覆盖前面的属性
+- 仅包含对象 自身的可枚举属性（展开一个对象实例时，会丢失其方法）
+- `TypeScript`编译器不允许展开泛型函数上的类型参数
+
+### Interface
+
+https://www.tslang.cn/docs/handbook/interfaces.html

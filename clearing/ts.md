@@ -315,4 +315,135 @@ let bothPlus = [0, ...first, ...second, 5];
 
 ### Interface
 
+```typescript
+interface LabelledValue {
+  label: string;
+}
+function printLabel(labelledObj: LabelledValue) {
+  console.log(labelledObj.label);
+}
+let myObj = {size: 10, label: "Size 10 Object"};
+printLabel(myObj);
+```
+
+类型检查器不会去检查属性的顺序，只要相应的属性存在并且类型也是对的就可以
+
+###### 可选属性
+
+```typescript
+interface SquareConfig {
+  color?: string;
+  width?: number;
+}
+```
+
+###### 只读属性
+
+```typescript
+interface SquareConfig {
+  color?: string;
+  width?: number;
+}
+```
+
+`readonly` vs `const`
+
+最简单判断该用`readonly`还是`const`的方法是看要把它做为变量使用还是做为一个属性。 做为变量使用的话用 `const`，若做为属性则使用`readonly`。
+
+###### 额外的属性检查
+
+除了已经确定的类型，还带有任意数量的其它属性:
+
+```typescript
+interface SquareConfig {
+    color?: string;
+    width?: number;
+    [propName: string]: any;
+}
+```
+
+###### 函数类型
+
+```typescript
+interface SearchFunc {
+  (source: string, subString: string): boolean;
+}
+```
+
+对于函数类型的类型检查来说，函数的参数名不需要与接口里定义的名字相匹配。
+
+```typescript
+let mySearch: SearchFunc;
+mySearch = function(src: string, sub: string): boolean {
+  let result = src.search(sub);
+  return result > -1;
+}
+```
+
+###### 可索引的类型
+
+```typescript
+interface StringArray {
+  [index: number]: string;
+}
+let myArray: StringArray;
+myArray = ["Bob", "Fred"];
+
+let myStr: string = myArray[0];
+```
+
+`TypeScript`支持两种索引签名：字符串和数字。 可以同时使用两种类型的索引，但是数字索引的返回值必须是字符串索引返回值类型的子类型。 这是因为当使用 `number`来索引时，JavaScript会将它转换成`string`然后再去索引对象。
+
+```typescript
+interface NumberDictionary {
+  [index: string]: number;
+  length: number;    // 可以，length是number类型
+  name: string       // 错误，`name`的类型与索引类型返回值的类型不匹配
+}
+```
+
+###### 类类型
+
+1. 实现接口
+
+   ```typescript
+   interface ClockInterface {
+       currentTime: Date;
+   }
+   
+   class Clock implements ClockInterface {
+       currentTime: Date;
+       constructor(h: number, m: number) { }
+   }
+   ```
+
+   
+
 https://www.tslang.cn/docs/handbook/interfaces.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

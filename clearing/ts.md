@@ -840,13 +840,50 @@ alert("card: " + pickedCard.card + " of " + pickedCard.suit);
 
 #### this参数在回调函数里
 
+将一个函数传递到某个库函数当回调函数被调用的时候，它们会被当成一个普通函数调用， `this`将为`undefined`。
+
 ```typescript
-interface UIElement {
-    addClickListener(onclick: (this: void, e: Event) => void): void;
+class Handler {
+    info: string;
+    onClickGood = (e: Event) => { this.info = e.message }
 }
 ```
 
- 
+上面这个方法可行，但注意：
+
+- 每个 `Handler`对象都会创建一个箭头函数
+- 方法只会被创建一次，添加到 `Handler`的原型链上
+- 们在不同 `Handler`对象间是共享的
 
 #### 重载
 
+```typescript
+let suits = ["hearts", "spades", "clubs", "diamonds"];
+
+function pickCard(x: {suit: string; card: number; }[]): number;
+function pickCard(x: number): {suit: string; card: number; };
+function pickCard(x): any {
+    // Check to see if we're working with an object/array
+    // if so, they gave us the deck and we'll pick the card
+    if (typeof x == "object") {
+        let pickedCard = Math.floor(Math.random() * x.length);
+        return pickedCard;
+    }
+    // Otherwise just let them pick the card
+    else if (typeof x == "number") {
+        let pickedSuit = Math.floor(x / 13);
+        return { suit: suits[pickedSuit], card: x % 13 };
+    }
+}
+
+let myDeck = [{ suit: "diamonds", card: 2 }, { suit: "spades", card: 10 }, { suit: "hearts", card: 4 }];
+let pickedCard1 = myDeck[pickCard(myDeck)];
+alert("card: " + pickedCard1.card + " of " + pickedCard1.suit);
+
+let pickedCard2 = pickCard(15);
+alert("card: " + pickedCard2.card + " of " + pickedCard2.suit);
+```
+
+- 重载的`pickCard`函数在调用的时候会进行正确的类型检查。
+- 在定义重载的时候，一定要把最精确的定义放在最前面。
+- `function pickCard(x): any`并不是重载列表的一部分，因此这里只有两个重载。

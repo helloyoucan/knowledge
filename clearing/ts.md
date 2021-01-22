@@ -887,3 +887,835 @@ alert("card: " + pickedCard2.card + " of " + pickedCard2.suit);
 - 重载的`pickCard`函数在调用的时候会进行正确的类型检查。
 - 在定义重载的时候，一定要把最精确的定义放在最前面。
 - `function pickCard(x): any`并不是重载列表的一部分，因此这里只有两个重载。
+
+
+
+
+
+### 泛型
+
+```typescript
+function identity<T>(arg: T): T {
+    return arg;
+}
+// 使用方式
+// 1.传入所有的参数，包含类型参数：
+let output = identity<string>("myString");
+// 2.类型推论
+let output = identity("myString"); 
+```
+
+
+
+#### 泛型类型
+
+- 泛型函数的类型与非泛型函数的类型没什么不同，只是有一个类型参数在最前面，像函数声明一样
+
+  ```typescript
+  function identity<T>(arg: T): T {
+      return arg;
+  }
+  let myIdentity: <T>(arg: T) => T = identity;
+  ```
+
+- 也可以使用不同的泛型参数名，只要在数量上和使用方式上能对应上就可以
+
+  ```typescript
+  function identity<T>(arg: T): T {
+      return arg;
+  }
+  let myIdentity: <U>(arg: U) => U = identity;
+  ```
+
+- 还可以使用带有调用签名的对象字面量来定义泛型函数
+
+  ```typescript
+  function identity<T>(arg: T): T {
+      return arg;
+  }
+  let myIdentity: {<T>(arg: T): T} = identity;
+  ```
+
+泛型接口：
+
+```typescript
+interface GenericIdentityFn<T> {
+    (arg: T): T;
+}
+
+function identity<T>(arg: T): T {
+    return arg;
+}
+
+let myIdentity: GenericIdentityFn<number> = identity;
+```
+
+
+
+#### 泛型类
+
+泛型类指的是实例部分的类型，所以类的静态属性不能使用这个泛型类型。
+
+```typescript
+class GenericNumber<T> {
+    zeroValue: T;
+    add: (x: T, y: T) => T;
+}
+
+let myGenericNumber = new GenericNumber<number>();
+myGenericNumber.zeroValue = 0;
+myGenericNumber.add = function(x, y) { return x + y; };
+```
+
+
+
+#### 泛型约束
+
+使用接口和`extends`关键字来实现约束
+
+```typescript
+interface Lengthwise {
+    length: number;
+}
+// 约束传入的类型必须包含.length属性的接口
+function loggingIdentity<T extends Lengthwise>(arg: T): T {
+    console.log(arg.length);  // Now we know it has a .length property, so no more error
+    return arg;
+}
+```
+
+
+
+
+
+### 枚举
+
+- 定义一些带名字的常量。
+- 支持数据和基于字符串的枚举。
+- 可以清晰低表达意图或创建一组有区别的用例。
+
+#### 数字枚举
+
+```typescript
+enum Direction {
+    Up = 1, // 初始化为1，其余成员会从1开始自增长
+    Down, // 2
+    Left, // 3
+    Right // 4
+}
+```
+
+不使用初始化器：
+
+```typescript
+enum Direction {
+    // 从0开始自增长
+    Up, // 0
+    Down, // 1
+    Left, // 2
+    Right, // 3
+}
+```
+
+
+
+#### 字符串枚举
+
+```typescript
+enum Direction {
+    Up = "UP",
+    Down = "DOWN",
+    Left = "LEFT",
+    Right = "RIGHT",
+}
+```
+
+
+
+#### 异构枚举
+
+```typescript
+// 混合字符串和数字成员
+enum BooleanLikeHeterogeneousEnum {
+    No = 0,
+    Yes = "YES",
+}
+```
+
+
+
+#### 计算和常量成员
+
+- 枚举成员的值可以是常量或计算出来的
+
+常量枚举：
+
+- 枚举的首个成员没有初始化器，它被赋予值 `0`
+
+- 不带有初始化器且它之前的枚举成员是一个 *数字*常量。 则从之前的枚举成员的值自增1；
+
+- 枚举成员使用 *常量枚举表达式*初始化。
+
+  常量枚举表达式：
+
+  - 一个枚举表达式字面量（主要是字符串字面量或数字字面量）
+  - 一个对之前定义的常量枚举成员的引用（可以是在不同的枚举类型中定义的）
+  - 带括号的常量枚举表达式
+  - 一元运算符 `+`, `-`, `~`其中之一应用在了常量枚举表达式
+  - 常量枚举表达式做为二元运算符 `+`, `-`, `*`, `/`, `%`, `<<`, `>>`, `>>>`, `&`, `|`, `^`的操作对象。 若常数枚举表达式求值后为 `NaN`或 `Infinity`，则会在编译阶段报错。
+
+
+
+#### 联合枚举与枚举成员的类型
+
+字面量枚举成员是指不带有初始值的常量枚举成员，或者是值被初始化为:
+
+- 任何字符串字面量（例如： `"foo"`， `"bar"`， `"baz"`）
+- 任何数字字面量（例如： `1`, `100`）
+- 应用了一元 `-`符号的数字字面量（例如： `-1`, `-100`
+
+枚举成员成为了类型
+
+```typescript
+enum ShapeKind {
+    Circle,
+    Square,
+}
+
+interface Circle {
+    kind: ShapeKind.Circle;
+    radius: number;
+}
+
+interface Square {
+    kind: ShapeKind.Square;
+    sideLength: number;
+}
+
+let c: Circle = {
+    kind: ShapeKind.Square,
+    //    ~~~~~~~~~~~~~~~~ Error!
+    radius: 100,
+}
+```
+
+枚举类型本身变成了每个枚举成员的 *联合*
+
+```typescript
+enum E {
+    Foo,
+    Bar,
+}
+
+function f(x: E) {
+    if (x !== E.Foo || x !== E.Bar) {
+        //             ~~~~~~~~~~~
+        // Error! 始终返回true,因为类型 "E.Foo" 和 "E.Bar" 没有重叠.
+    }
+}
+```
+
+
+
+
+
+#### 运行时的枚举
+
+```typescript
+enum E {
+    X, Y, Z
+}
+```
+
+传递给函数
+
+```typescript
+function f(obj: { X: number }) {
+    return obj.X;
+}
+
+// 可以运行，因为“E”有一个名为“X”的属性，它是一个数字。
+f(E);
+```
+
+##### 反向映射
+
+```typescript
+enum Enum {
+    A
+}
+let a = Enum.A;
+let nameOfA = Enum[a]; // "A"
+
+//
+编译
+```
+
+- 引用枚举成员总会生成为对属性访问并且永远也不会内联代码
+- *不会*为**字符串枚举成员**生成反向映射
+
+##### `const`枚举
+
+- 减少在额外生成的代码上的开销
+- 避免额外的非直接的对枚举成员的访问
+
+可以使用 `const`枚举
+
+```
+const enum Enum {
+    A = 1,
+    B = A * 2
+}
+```
+
+- 常量枚举只能使用常量枚举表达式
+- 在编译阶段会被删除
+- 成员在使用的地方会被内联进来
+- 不允许包含计算成员
+
+```typescript
+const enum Directions {
+    Up,
+    Down,
+    Left,
+    Right
+}
+let directions = [Directions.Up, Directions.Down, Directions.Left, Directions.Right]
+//编译后
+var directions = [0 /* Up */, 1 /* Down */, 2 /* Left */, 3 /* Right */]
+```
+
+ 
+
+#### 外部枚举
+
+用来描述**已经存在**的枚举类型的形状
+
+- 如果在运行时不存在`Enum` ，则不要添加`declare enum Enum`
+
+```typescript
+declare enum Enum {
+    A = 1,
+    B,
+    C = 2
+}
+```
+
+外部枚举和非外部枚举的区别
+
+>  **正常的枚举里：**没有初始化方法的成员被当成常数成员
+
+> **非常数的外部枚举：**没有初始化方法时被当做需要经过计算的
+
+
+
+
+
+### 类型推断
+
+推断时机：
+
+- 初始化变量和成员
+- 设置默认参数
+- 决定函数返回值
+
+推断方式：
+
+- 最佳同一类型（兼容所有候选类型的类型）
+- 上下文类型（发生在表达式的类型与所处的位置相关时）
+
+
+
+### 类型兼容性
+
+- 只要目标类型的成员会被检查是否兼容
+- 比较过程是递归进行，检查每个成员及子成员
+
+
+
+#### 比较函数
+
+##### 函数参数双向协变
+
+当比较函数参数类型时，只有当源函数参数能够赋值给目标函数或者反过来时才能赋值成功。
+
+##### 可选参数及剩余参数
+
+比较函数兼容性的时候，可选参数与必须参数是可互换的。 
+
+##### 函数重载
+
+对于有重载的函数，源函数的每个重载都要在目标函数上找到对应的函数签名。 这确保了目标函数可以在所有源函数可调用的地方调用。
+
+
+
+#### 枚举
+
+枚举类型与数字类型兼容，并且数字类型与枚举类型兼容。不同枚举类型之间是不兼容的。
+
+
+
+#### 类
+
+比较两个类类型的对象时，只有实例的成员会被比较。 静态成员和构造函数不在比较的范围内。
+
+##### 类的私有成员和受保护成员
+
+类的`private`成员和`protected`成员会影响兼容性。
+
+
+
+#### 泛型
+
+对于没指定泛型类型的泛型参数时，会把所有泛型参数当成`any`比较。
+
+
+
+
+
+### 高级类型
+
+#### 交叉类型
+
+交叉类型是将多个类型合并为一个类型。
+
+```typescript
+type B={}
+type C={}
+type D={}
+type A = B & C & D
+```
+
+#### 联合类型
+
+```typescript
+type A = string|number
+```
+
+
+
+#### 类型保护与区分类型
+
+```typescript
+let pet = getSmallPet();
+// 为了声明pet为Fish，类型断言
+if ((<Fish>pet).swim) {
+    (<Fish>pet).swim();
+}
+else {
+    (<Bird>pet).fly();
+}
+```
+
+##### 用户自定义的类型保护
+
+```typescript
+function isFish(pet: Fish | Bird): pet is Fish {
+    return (<Fish>pet).swim !== undefined;
+}
+// 'swim' 和 'fly' 调用都没有问题了
+if (isFish(pet)) {
+    pet.swim();
+}
+else {
+    pet.fly();
+}
+/**
+注意:TypeScript不仅知道在 if分支里 pet是 Fish类型； 它还清楚在 else分支里，一定 不是 Fish类型，一定是 Bird类型
+*/
+```
+
+#####typeof类型保护
+
+```typescript
+function padLeft(value: string, padding: string | number) {
+    if (typeof padding === "number") {
+        return Array(padding + 1).join(" ") + value;
+    }
+    if (typeof padding === "string") {
+        return padding + value;
+    }
+    throw new Error(`Expected string or number, got '${padding}'.`);
+}
+```
+
+
+
+##### instanceof类型保护
+
+- 是通过构造函数来细化类型的一种方式
+
+```typescript
+// 类型为SpaceRepeatingPadder | StringPadder
+let padder: Padder = getRandomPadder();
+
+if (padder instanceof SpaceRepeatingPadder) {
+    padder; // 类型细化为'SpaceRepeatingPadder'
+}
+if (padder instanceof StringPadder) {
+    padder; // 类型细化为'StringPadder'
+}
+```
+
+要求比较对象是一个构造函数，`TypeScript`将细化为：
+
+1. 此构造函数的 `prototype`属性的类型，如果它的类型不为 `any`的话
+2. 构造签名所返回的类型的联合
+
+
+
+#### 可以为null的类型
+
+- `null`与 `undefined`可以赋值给任何类型
+- `null`与 `undefined`是所有其它类型的一个有效值
+
+`--strictNullChecks`标记可以解决：当你声明一个变量时，它不会自动地包含 `null`或 `undefined`。 
+
+##### 可选参数和可选类型
+
+使用了 `--strictNullChecks`，可选参数会被自动地加上 `| undefined`，可选属性也会有同样的处理。
+
+
+
+##### 类型保护和类型断言
+
+由于可以为null的类型是通过联合类型实现，那么你需要使用类型保护来去除 `null`
+
+```typescript
+function f(sn: string | null): string {
+    if (sn == null) {
+        return "default";
+    }
+    else {
+        return sn;
+    }
+}
+```
+
+
+
+#### 类型别名
+
+- 类型别名会给一个类型起个新名字
+-  类型别名有时和接口很像，但是可以作用于原始值，联合类型，元组以及其它任何你需要手写的类型
+- 起别名不会新建一个类型 - 它创建了一个新 *名字*来引用那个类型
+
+```typescript
+type Name = string;
+type NameResolver = () => string;
+type NameOrResolver = Name | NameResolver;
+```
+
+类型别名也可以是泛型：
+
+```typescript
+type Container<T> = { value: T };
+```
+
+以使用类型别名来在属性里引用自己：
+
+```typescript
+type Tree<T> = {
+    value: T;
+    left: Tree<T>;
+    right: Tree<T>;
+}
+```
+
+类型别名不能出现在声明右侧的任何地方:
+
+```typescript
+type Yikes = Array<Yikes>; // error
+```
+
+##### 接口VS.类型别名
+
+- 类型别名并不创建新名字
+- 类型别名不能被 `extends`和 `implements`
+- 无法通过接口来描述一个类型并且需要使用联合类型或元组类型，这时通常会使用类型别名。
+
+#### 字符串字面量类型
+
+字符串字面量类型允许你指定字符串必须的固定值。
+
+实现类似枚举类型的字符串：
+
+```typescript
+type Easing = "ease-in" | "ease-out" | "ease-in-out";
+```
+
+区分函数重载：
+
+```typescript
+function createElement(tagName: "img"): HTMLImageElement;
+function createElement(tagName: "input"): HTMLInputElement;
+// ... more overloads ...
+function createElement(tagName: string): Element {
+    // ... code goes here ...
+}
+```
+
+
+
+#### 数字字面量类型
+
+```typescript
+function rollDie(): 1 | 2 | 3 | 4 | 5 | 6 {
+    // ...
+}
+```
+
+#### 枚举成员类型
+
+当每个枚举成员都是用字面量初始化的时候枚举成员是具有类型的
+
+
+
+#### 可辨识联合
+
+合并单例类型，联合类型，类型保护和类型别名来创建一个叫做 *可辨识联合*的高级模式，它也称做 *标签联合*或 *代数数据类型*。
+
+```typescript
+interface Square {
+    kind: "square";
+    size: number;
+}
+interface Rectangle {
+    kind: "rectangle";
+    width: number;
+    height: number;
+}
+interface Circle {
+    kind: "circle";
+    radius: number;
+}
+type Shape = Square | Rectangle | Circle;
+function area(s: Shape) {
+    switch (s.kind) {
+        case "square": return s.size * s.size;
+        case "rectangle": return s.height * s.width;
+        case "circle": return Math.PI * s.radius ** 2;
+    }
+}
+```
+
+
+
+##### 完整性检查
+
+当没有涵盖所有可辨识联合的变化时，让编译器显示报错
+
+```typescript
+type Shape = Square | Rectangle | Circle | Triangle; //新增了 Triangle
+function area(s: Shape) {
+    switch (s.kind) {
+        case "square": return s.size * s.size;
+        case "rectangle": return s.height * s.width;
+        case "circle": return Math.PI * s.radius ** 2;
+    }
+    // 没有更新case
+    // should error here - we didn't handle case "triangle"
+}
+```
+
+解决方式：
+
+1. 启用 `--strictNullChecks`并且指定一个返回值类型
+
+   ```typescript
+   function area(s: Shape): number { // error: returns number | undefined
+       switch (s.kind) {
+           case "square": return s.size * s.size;
+           case "rectangle": return s.height * s.width;
+           case "circle": return Math.PI * s.radius ** 2;
+       }
+   }
+   ```
+
+2. 使用 `never`类型，编译器用它来进行完整性检查
+
+   ```typescript
+   function assertNever(x: never): never {
+       throw new Error("Unexpected object: " + x);
+   }
+   function area(s: Shape) {
+       switch (s.kind) {
+           case "square": return s.size * s.size;
+           case "rectangle": return s.height * s.width;
+           case "circle": return Math.PI * s.radius ** 2;
+           default: return assertNever(s); // error here if there are missing cases
+       }
+   }
+   ```
+
+
+
+#### 多态的this类型
+
+多态的 `this`类型表示的是某个包含类或接口的 *子类型*。
+
+#### 类型索引
+
+使用索引类型，编译器就能够检查使用了动态属性名的代码。
+
+
+
+#### 映射类型
+
+`TypeScript`提供了从旧类型中创建新类型的一种方式 — **映射类型**。 在映射类型里，新类型以相同的形式去转换旧类型里每个属性
+
+```typescript
+type Readonly<T> = {
+    readonly [P in keyof T]: T[P];
+}
+type Partial<T> = {
+    [P in keyof T]?: T[P];
+}
+type PersonPartial = Partial<Person>;
+type ReadonlyPerson = Readonly<Person>;
+```
+
+最简单的映射类型和它的组成部分：
+
+```typescript
+type Keys = 'option1' | 'option2';
+type Flags = { [K in Keys]: boolean };
+```
+
+它的语法与索引签名的语法类型，内部使用了 `for .. in`。 具有三个部分：
+
+1. 类型变量 `K`，它会依次绑定到每个属性。
+2. 字符串字面量联合的 `Keys`，它包含了要迭代的属性名的集合。
+3. 属性的结果类型。
+
+##### 由映射类型进行推断
+
+```typescript
+function unproxify<T>(t: Proxify<T>): T {
+    let result = {} as T;
+    for (const k in t) {
+        result[k] = t[k].get();
+    }
+    return result;
+}
+
+let originalProps = unproxify(proxyProps);
+```
+
+
+
+
+
+### 模块
+
+#### `export =` 和 `import = require()`
+
+- CommonJS和AMD的环境里都有一个`exports`变量，这个变量包含了一个模块的所有导出内容。
+
+- `export default` 语法并不能兼容CommonJS和AMD的`exports`。
+
+- 为了支持CommonJS和AMD的`exports`, TypeScript提供了`export =`语法。
+
+- `export =`语法定义一个模块的导出`对象`。 这里的`对象`一词指的是类，接口，命名空间，函数或枚举。
+- 若使用`export =`导出一个模块，则必须使用TypeScript的特定语法`import module = require("module")`来导入此模块
+
+```typescript
+class ZipCodeValidator {
+}
+export = ZipCodeValidator;
+```
+
+```typescript
+import zip = require("./ZipCodeValidator");
+```
+
+
+
+#### 外部模块
+
+使用顶级的 `export`声明来为每个模块都定义一个`.d.ts`文件
+
+```typescript
+// node.d.ts 
+declare module "url" {
+    export interface Url {
+        protocol?: string;
+        hostname?: string;
+        pathname?: string;
+    }
+
+    export function parse(urlStr: string, parseQueryString?, slashesDenoteHost?): Url;
+}
+
+declare module "path" {
+    export function normalize(p: string): string;
+    export function join(...paths: any[]): string;
+    export let sep: string;
+}
+```
+
+使用三斜线指令`/// <reference>` `node.d.ts`并且使用`import url = require("url");`或`import * as URL from "url"`加载模块
+
+```typescript
+/// <reference path="node.d.ts"/>
+import * as URL from "url";
+let myUrl = URL.parse("http://www.typescriptlang.org");
+```
+
+#### 外部模块简写
+
+采用声明的简写形式以便能够快速使用它
+
+```typescript
+// declarations.d.ts
+declare module "hot-new-module";
+```
+
+```typescript
+import x, {y} from "hot-new-module";
+x(y);
+```
+
+
+
+#### 模块声明通配符（加载非JavaScript内容）
+
+```typescript
+declare module "*!text" {
+    const content: string;
+    export default content;
+}
+// Some do it the other way around.
+declare module "json!*" {
+    const value: any;
+    export default value;
+}
+```
+
+#### UMD模块
+
+有些模块被设计成兼容多个模块加载器，或者不使用模块加载器（全局变量）。 它们以 [UMD](https://github.com/umdjs/umd)模块为代表。 这些库可以通过导入的形式或全局变量的形式访问。
+
+```typescript
+// math-lib.d.ts
+export function isPrime(x: number): boolean;
+export as namespace mathLib;
+```
+
+```typescript
+import { isPrime } from "math-lib";
+isPrime(2);
+mathLib.isPrime(2); // 错误: 不能在模块内使用全局定义。
+```
+
+
+
+#### 创建模块结构指导
+
+1. 尽可能地再顶层导出
+2. 如要导出多个对象，把它们放在顶层导出
+3. 明确累出导入的名字
+4. 当你要导出大量内容时，使用命名空间导入模式
+5. 使用重新导出进行扩展
+6. 模块里不要使用命名空间 
+

@@ -1719,3 +1719,421 @@ mathLib.isPrime(2); // 错误: 不能在模块内使用全局定义。
 5. 使用重新导出进行扩展
 6. 模块里不要使用命名空间 
 
+
+
+
+
+### 命名空间
+
+- 避免验证器的命名冲突
+- 若接口和类在命名空间外也要访问，则使用export
+
+##### 使用命名空间的验证器
+
+```typescript
+namespace Validation {
+    export interface StringValidator {
+        isAcceptable(s: string): boolean;
+    }
+    const lettersRegexp = /^[A-Za-z]+$/;
+    const numberRegexp = /^[0-9]+$/;
+    export class LettersOnlyValidator implements StringValidator {
+        isAcceptable(s: string) {
+            return lettersRegexp.test(s);
+        }
+    }
+    export class ZipCodeValidator implements StringValidator {
+        isAcceptable(s: string) {
+            return s.length === 5 && numberRegexp.test(s);
+        }
+    }
+}
+```
+
+
+
+#### 分离到多文件
+
+应用变得越来越大时，我们需要将代码分离到不同的文件中以便于维护。
+
+##### 多文件中的命名空间
+
+- 若不同文件间存在依赖，则使用引用标签来声明文件之间的关联
+
+`Validation.ts`
+
+```typescript
+namespace Validation {
+    export interface StringValidator {
+        isAcceptable(s: string): boolean;
+    }
+}
+```
+
+`LettersOnlyValidator.ts`
+
+```typescript
+/// <reference path="Validation.ts" />
+namespace Validation {
+    const lettersRegexp = /^[A-Za-z]+$/;
+    export class LettersOnlyValidator implements StringValidator {
+        isAcceptable(s: string) {
+            return lettersRegexp.test(s);
+        }
+    }
+}
+```
+
+`ZipCodeValidator.ts`
+
+```typescript
+/// <reference path="Validation.ts" />
+namespace Validation {
+    const numberRegexp = /^[0-9]+$/;
+    export class ZipCodeValidator implements StringValidator {
+        isAcceptable(s: string) {
+            return s.length === 5 && numberRegexp.test(s);
+        }
+    }
+}
+```
+
+`Test.ts`
+
+```typescript
+// <reference path="Validation.ts" />
+/// <reference path="LettersOnlyValidator.ts" />
+/// <reference path="ZipCodeValidator.ts" />
+
+// Some samples to try
+let strings = ["Hello", "98052", "101"];
+
+// Validators to use
+let validators: { [s: string]: Validation.StringValidator; } = {};
+validators["ZIP code"] = new Validation.ZipCodeValidator();
+validators["Letters only"] = new Validation.LettersOnlyValidator();
+
+// Show whether each string passed each validator
+for (let s of strings) {
+    for (let name in validators) {
+        console.log(`"${ s }" - ${ validators[name].isAcceptable(s) ? "matches" : "does not match" } ${ name }`);
+    }
+}
+```
+
+
+
+涉及多文件时，需要确保所以编译后的额代码都被加载，有两种方式：
+
+1. 使用`--outFile`标记，把所以的输入文件做作为一个输出文件
+2. 编译每一个文件（默认），每个源文件生成对应的JavaScript文件，然后在页面按照正确的顺序引进
+
+
+
+
+
+#### 别名
+
+> import q = x.y.z
+
+```typescript
+namespace Shapes {
+    export namespace Polygons {
+        export class Triangle { }
+        export class Square { }
+    }
+}
+
+import polygons = Shapes.Polygons;
+let sq = new polygons.Square(); // Same as "new Shapes.Polygons.Square()"
+```
+
+
+
+### 模块解析
+
+#### 模块解析策略
+
+##### Classic
+
+以前是`TypeScript`默认的解析策略,现在是为了向后兼容而存在。
+
+###### 相对导入
+
+在`/root/src/folder/A.ts`文件里的`import { b } from "./moduleB"`,使用下面的查找流程：
+
+1. `/root/src/folder/moduleB.ts`
+2. `/root/src/folder/moduleB.d.ts`
+
+###### 非相对导入
+
+在`/root/src/folder/A.ts`文件里，`mport { b } from "moduleB"`：
+
+1. `/root/src/folder/moduleB.ts`
+2. `/root/src/folder/moduleB.d.ts`
+3. `/root/src/moduleB.ts`
+4. `/root/src/moduleB.d.ts`
+5. `/root/moduleB.ts`
+6. `/root/moduleB.d.ts`
+7. `/moduleB.ts`
+8. `/moduleB.d.ts`
+
+
+
+##### Node
+
+这个解析策略试图在运行时模仿`Node.js`模块解析机制。
+
+###### `Node.js`解析模块
+
+**相对路径**
+
+在`/root/src/moduleA.js`的`var x = require("./moduleB");`
+
+1. 检查`/root/src/moduleB.js`文件是否存在。
+2. 检查`/root/src/moduleB`目录是否包含一个`package.json`文件，且`package.json`文件指定了一个`"main"`模块。 在我们的例子里，如果Node.js发现文件 `/root/src/moduleB/package.json`包含了`{ "main": "lib/mainModule.js" }`，那么Node.js会引用`/root/src/moduleB/lib/mainModule.js`。
+3. 检查`/root/src/moduleB`目录是否包含一个`index.js`文件。 这个文件会被隐式地当作那个文件夹下的"main"模块。
+
+**非相对路径**
+
+在`/root/src/moduleA.js`里使用的是非相对路径导入`var x = require("moduleB");`。
+
+Node则会以下面的顺序去解析 `moduleB`，直到有一个匹配上：
+
+1. `/root/src/node_modules/moduleB.js`
+
+2. `/root/src/node_modules/moduleB/package.json` (如果指定了`"main"`属性)
+
+3. `/root/src/node_modules/moduleB/index.js`
+
+   ----------------
+
+4. `/root/node_modules/moduleB.js`
+
+5. `/root/node_modules/moduleB/package.json` (如果指定了`"main"`属性)
+
+6. `/root/node_modules/moduleB/index.js`
+
+   -------------------
+
+7. `/node_modules/moduleB.js`
+
+8. `/node_modules/moduleB/package.json` (如果指定了`"main"`属性)
+
+9. `/node_modules/moduleB/index.js`
+
+> 注意`Node.js`在步骤（4）和（7）会向上跳一级目录。
+
+
+
+
+
+##### Typescript解析模块
+
+- `TypeScrip`t在Node解析逻辑基础上增加了`TypeScript`源文件的扩展名（ `.ts`，`.tsx`和`.d.ts`）
+- `TypeScript`在 `package.json`里使用字段`"types"`来表示类似`"main"`的意义 - 编译器会使用它来找到要使用的"main"定义文件。
+
+###### 相对路径
+
+`import { b } from "./moduleB"`在`/root/src/moduleA.ts`里：
+
+1. `/root/src/moduleB.ts`
+2. `/root/src/moduleB.tsx`
+3. `/root/src/moduleB.d.ts`
+4. `/root/src/moduleB/package.json` (如果指定了`"types"`属性)
+5. `/root/src/moduleB/index.ts`
+6. `/root/src/moduleB/index.tsx`
+7. `/root/src/moduleB/index.d.ts`
+
+
+
+###### 非相对路径
+
+在`/root/src/moduleA.ts`文件里的`import { b } from "moduleB"`：
+
+1. `/root/src/node_modules/moduleB.ts`
+
+2. `/root/src/node_modules/moduleB.tsx`
+
+3. `/root/src/node_modules/moduleB.d.ts`
+
+4. `/root/src/node_modules/moduleB/package.json` (如果指定了`"types"`属性)
+
+5. `/root/src/node_modules/moduleB/index.ts`
+
+6. `/root/src/node_modules/moduleB/index.tsx`
+
+7. `/root/src/node_modules/moduleB/index.d.ts`
+
+   ---
+
+8. `/root/node_modules/moduleB.ts`
+
+9. `/root/node_modules/moduleB.tsx`
+
+10. `/root/node_modules/moduleB.d.ts`
+
+11. `/root/node_modules/moduleB/package.json` (如果指定了`"types"`属性)
+
+12. `/root/node_modules/moduleB/index.ts`
+
+13. `/root/node_modules/moduleB/index.tsx`
+
+14. `/root/node_modules/moduleB/index.d.ts`
+
+    ---
+
+15. `/node_modules/moduleB.ts`
+
+16. `/node_modules/moduleB.tsx`
+
+17. `/node_modules/moduleB.d.ts`
+
+18. `/node_modules/moduleB/package.json` (如果指定了`"types"`属性)
+
+19. `/node_modules/moduleB/index.ts`
+
+20. `/node_modules/moduleB/index.tsx`
+
+21. `/node_modules/moduleB/index.d.ts`
+
+> 注意：在步骤（8）和（15）向上跳了两次目录
+
+
+
+
+
+#### 附加的模块解析标记
+
+- 将`.ts`编译成`.js`，将不同位置的依赖拷贝至一个输出位置
+- 运行时的模块名与包含声明的源文件里的模块名不同
+- 输出文件里模块路径与编译时的源文件路径不同
+
+
+
+##### Base URL
+
+value由两者之一决定：
+
+- 命令行中的`baseUrl`的值（若是相对路径则相当于当前路径进行计算）
+- `tsconfig.json`的`baseUrl`属性（若是相对路径，则相对于`tsconfig.json`路径进行计算）
+
+##### 路径映射
+
+过使用`tsconfig.json`文件里的`"paths"`来支持这样的声明映射
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".", // This must be specified if "paths" is.
+    "paths": {
+      "jquery": ["node_modules/jquery/dist/jquery"] // 此处映射是相对于"baseUrl"
+    }
+  }
+}
+```
+
+>  注意`"paths"`是相对于`"baseUrl"`进行解析
+
+
+
+##### 利用`rootDirs`指定虚拟目录
+
+编译器可以在“虚拟”目录下解析相对模块导入
+
+```json
+{
+  "compilerOptions": {
+    "rootDirs": [
+      "src/views",
+      "generated/templates/views"
+    ]
+  }
+}
+```
+
+
+
+#### 跟踪模块解析
+
+通过 `--traceResolution`启用编译器的模块解析跟踪，它会告诉我们在模块解析过程中发生了什么。
+
+
+
+#### 使用`--noResolve`
+
+`--noResolve`编译选项告诉编译器不要添加任何不是在命令行上传入的文件到编译列表。
+
+
+
+### 声明合并
+
+TS中的声明会创建三种实体之一：
+
+- 命名空间（包含了用（.）符号来访问时使用的名字）
+- 类型（用声明的模型创建一个类型并绑定到给定的名字上）
+- 值（会创建在JavaScript输出中看到的值）
+
+| Declaration Type | Namespace | Type | Value |
+| :--------------- | :-------: | :--: | :---: |
+| Namespace        |     X     |      |   X   |
+| Class            |           |  X   |   X   |
+| Enum             |           |  X   |   X   |
+| Interface        |           |  X   |       |
+| Type Alias       |           |  X   |       |
+| Function         |           |      |   X   |
+| Variable         |           |      |   X   |
+
+
+
+#### 合并接口
+
+```typescript
+interface Box {
+    height: number;
+    width: number;
+}
+interface Box {
+    scale: number;
+}
+let box: Box = {height: 5, width: 6, scale: 10};
+```
+
+- 接口的非函数的成员应该是唯一的。
+- 如果它们不是唯一的，那么它们必须是相同的类型。
+- 对于函数成员，每个同名函数声明都会被当成这个函数的一个重载。 
+- 后面的接口具有更高的优先级。
+
+
+
+#### 合并命名空间
+
+- 同名的命名空间也会合并其成员。
+- 对于命名空间的合并，模块导出的同名接口进行合并，构成单一命名空间内含合并后的接口。
+- 对于命名空间里值的合并，如果当前已经存在给定名字的命名空间，那么后来的命名空间的导出成员会被加到已经存在的那个模块里。
+
+```typescript
+namespace Animals {
+    export class Zebra { }
+}
+namespace Animals {
+    export interface Legged { numberOfLegs: number; }
+    export class Dog { }
+}
+// 等同于
+namespace Animals {
+    export interface Legged { numberOfLegs: number; }
+    export class Zebra { }
+    export class Dog { }
+}
+```
+
+
+
+#### 命名空间与类和函数和枚举类型合并
+
+- 只要命名空间的定义符合将要合并类型的定义，命名空间就可以与其它类型的声明进行合并。
+- 合并结果包含两者的声明类型。
+
+##### 合并命名空间和类
+

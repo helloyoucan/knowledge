@@ -2137,3 +2137,777 @@ namespace Animals {
 
 ##### 合并命名空间和类
 
+- 需要导出命名空间的class，才能让合并的类能访问
+- 合并的结果是一个类带有一个内部类
+- 也可以使用命名空间为类型增加一些静态属性
+
+```typescript
+class Album {
+    label: Album.AlbumLabel;
+}
+namespace Album {
+    export class AlbumLabel { }
+}
+```
+
+
+
+使用声明合并也可以扩展函数的属性
+
+```typescript
+function buildLabel(name: string): string {
+    return buildLabel.prefix + name + buildLabel.suffix;
+}
+namespace buildLabel {
+    export let suffix = "";
+    export let prefix = "Hello, ";
+}
+console.log(buildLabel("Sam Smith"));
+```
+
+也可以扩展枚举类型：
+
+```typescript
+enum Color {
+    red = 1,
+    green = 2,
+    blue = 4
+}
+
+namespace Color {
+    export function mixColor(colorName: string) {
+        if (colorName == "yellow") {
+            return Color.red + Color.green;
+        }
+        else if (colorName == "white") {
+            return Color.red + Color.green + Color.blue;
+        }
+        else if (colorName == "magenta") {
+            return Color.red + Color.blue;
+        }
+        else if (colorName == "cyan") {
+            return Color.green + Color.blue;
+        }
+    }
+}
+```
+
+
+
+#### 非法的合并
+
+- 类布不能与其它类和变量合并
+
+
+
+#### 模块扩展
+
+```typescript
+import { Observable } from "./observable";
+declare module "./observable" {
+    interface Observable<T> {
+        map<U>(f: (x: T) => U): Observable<U>;
+    }
+}
+// 扩展了方法，需要使用declare声明
+Observable.prototype.map = function (f) {
+    // ... another exercise for the reader
+}
+```
+
+
+
+##### 全局扩展
+
+```typescript
+// observable.ts
+export class Observable<T> {
+    // ... still no implementation ...
+}
+declare global {
+    interface Array<T> {
+        toObservable(): Observable<T>;
+    }
+}
+Array.prototype.toObservable = function () {
+    // ...
+}
+```
+
+
+
+
+
+### 装饰器
+
+- 一种特殊类型的声明
+- 能附加到类声明、方法、访问符、属性、或参数上
+- 使用 `@expression`的形式，`expression`求值后必须为一个函数
+- 运行时被调用，被装饰的声明信息作为参数传入
+
+```typescript
+function sealed(target) {
+    // do something with "target" ...
+}
+```
+
+
+
+#### 装饰器工厂
+
+可以通过传入参数返回不同的装饰器函数
+
+```typescript
+function color(value: string) { // 这是一个装饰器工厂
+    return function (target) { //  这是装饰器
+        // do something with "target" and "value"...
+    }
+}
+```
+
+#### 装饰器组合
+
+- 在同一行使用
+
+  ```typescript
+  @f @g x
+  ```
+
+- 在多行上使用
+
+  ```typescript
+  @f
+  @g
+  x
+  ```
+
+
+
+多个装饰器用在一个声明上时，求值方式与复合函数相似：
+
+- 由上至下依次对装饰器表达式求值。
+- 求值的结果会被当作函数，由下至上依次调用。
+
+```typescript
+function f() {
+    console.log("f(): evaluated");
+    return function (target, propertyKey: string, descriptor: PropertyDescriptor) {
+        console.log("f(): called");
+    }
+}
+function g() {
+    console.log("g(): evaluated");
+    return function (target, propertyKey: string, descriptor: PropertyDescriptor) {
+        console.log("g(): called");
+    }
+}
+class C {
+    @f()
+    @g()
+    method() {}
+}
+```
+
+#### 装饰器求值
+
+类中不同声明上的装饰器按照一定顺序应用：
+
+1. *参数装饰器*，然后依次是*方法装饰器*，*访问符装饰器*，或*属性装饰器*应用到每个**实例成员**。
+2. *参数装饰器*，然后依次是*方法装饰器*，*访问符装饰器*，或*属性装饰器*应用到每个**静态成员**。
+3. *参数装饰器*应用到构造函数。
+4. *类装饰器*应用到类。
+
+
+
+####类装饰器
+
+- 在类声明之前声明
+- 应用于类构造函数，可以用于监视、修改、替换类定义
+- 不能在`.d.ts文件`（声明文件）中使用
+- 不能在任何外部上下文中使用（例如declare的类）
+- 类装饰器表达式会在运行时当作函数被调用，类的构造函数作为其唯一的参数
+- 如果类装饰器返回一个值，它会使用提供的构造函数来替换类的声明（必须注意处理好原来的原型链。）
+
+```typescript
+@sealed
+class Greeter {
+    greeting: string;
+    constructor(message: string) {
+        this.greeting = message;
+    }
+    greet() {
+        return "Hello, " + this.greeting;
+    }
+}
+function sealed(constructor: Function) {
+    Object.seal(constructor);
+    Object.seal(constructor.prototype);
+}
+```
+
+重载构造函数：
+
+```typescript
+function classDecorator<T extends {new(...args:any[]):{}}>(constructor:T) {
+    return class extends constructor {
+        newProperty = "new property";
+        hello = "override";
+    }
+}
+
+@classDecorator
+class Greeter {
+    property = "property";
+    hello: string;
+    constructor(m: string) {
+        this.hello = m;
+    }
+}
+
+console.log(new Greeter("world"));
+```
+
+
+
+#### 方法装饰器
+
+- 声明在一个方法的声明之前，被应用到方法上
+- 可以用于监视、修改、或替换方法定义
+- 不能用在声明文件、重载喝果汁任何外部上下文（例如declare的类中）
+
+方法装饰器表达式会在运行时当作函数被调用，传入下列3个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+3. 成员的*属性描述符*。
+
+> 注意  如果代码输出目标版本小于`ES5`，*属性描述符*将会是`undefined`。
+
+[
+模块](https://www.tslang.cn/docs/handbook/modules.html)[命名空间](https://www.tslang.cn/docs/handbook/namespaces.html)[命名空间和模块](https://www.tslang.cn/docs/handbook/namespaces-and-modules.html)[模块解析](https://www.tslang.cn/docs/handbook/module-resolution.html)[声明合并](https://www.tslang.cn/docs/handbook/declaration-merging.html)[JSX](https://www.tslang.cn/docs/handbook/jsx.html)[装饰器](https://www.tslang.cn/docs/handbook/decorators.html)[Mixins](https://www.tslang.cn/docs/handbook/mixins.html)[三斜线指令](https://www.tslang.cn/docs/handbook/triple-slash-directives.html)[JavaScript文件类型检查](https://www.tslang.cn/docs/handbook/type-checking-javascript-files.html)[声明文件](https://www.tslang.cn/docs/handbook/decorators.html#toc-declaration-files)[项目配置](https://www.tslang.cn/docs/handbook/decorators.html#toc-project-config)
+
+# 装饰器
+
+# 介绍
+
+随着TypeScript和ES6里引入了类，在一些场景下我们需要额外的特性来支持标注或修改类及其成员。 装饰器（Decorators）为我们在类的声明及成员上通过元编程语法添加标注提供了一种方式。 Javascript里的装饰器目前处在 [建议征集的第二阶段](https://github.com/tc39/proposal-decorators)，但在TypeScript里已做为一项实验性特性予以支持。
+
+> 注意  装饰器是一项实验性特性，在未来的版本中可能会发生改变。
+
+若要启用实验性的装饰器特性，你必须在命令行或`tsconfig.json`里启用`experimentalDecorators`编译器选项：
+
+**命令行**:
+
+```shell
+tsc --target ES5 --experimentalDecorators
+```
+
+**tsconfig.json**:
+
+```json
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "experimentalDecorators": true
+    }
+}
+```
+
+# 装饰器
+
+*装饰器*是一种特殊类型的声明，它能够被附加到[类声明](https://www.tslang.cn/docs/handbook/decorators.html#class-decorators)，[方法](https://www.tslang.cn/docs/handbook/decorators.html#method-decorators)， [访问符](https://www.tslang.cn/docs/handbook/decorators.html#accessor-decorators)，[属性](https://www.tslang.cn/docs/handbook/decorators.html#property-decorators)或[参数](https://www.tslang.cn/docs/handbook/decorators.html#parameter-decorators)上。 装饰器使用 `@expression`这种形式，`expression`求值后必须为一个函数，它会在运行时被调用，被装饰的声明信息做为参数传入。
+
+例如，有一个`@sealed`装饰器，我们会这样定义`sealed`函数：
+
+```ts
+function sealed(target) {
+    // do something with "target" ...
+}
+```
+
+> 注意  后面[类装饰器](https://www.tslang.cn/docs/handbook/decorators.html#class-decorators)小节里有一个更加详细的例子。
+
+## 装饰器工厂
+
+如果我们要定制一个修饰器如何应用到一个声明上，我们得写一个装饰器工厂函数。 *装饰器工厂*就是一个简单的函数，它返回一个表达式，以供装饰器在运行时调用。
+
+我们可以通过下面的方式来写一个装饰器工厂函数：
+
+```ts
+function color(value: string) { // 这是一个装饰器工厂
+    return function (target) { //  这是装饰器
+        // do something with "target" and "value"...
+    }
+}
+```
+
+> 注意  下面[方法装饰器](https://www.tslang.cn/docs/handbook/decorators.html#method-decorators)小节里有一个更加详细的例子。
+
+## 装饰器组合
+
+多个装饰器可以同时应用到一个声明上，就像下面的示例：
+
+- 书写在同一行上：
+
+```ts
+@f @g x
+```
+
+- 书写在多行上：
+
+```ts
+@f
+@g
+x
+```
+
+当多个装饰器应用于一个声明上，它们求值方式与[复合函数](http://en.wikipedia.org/wiki/Function_composition)相似。在这个模型下，当复合*f*和*g*时，复合的结果(*f* ∘ *g*)(*x*)等同于*f*(*g*(*x*))。
+
+同样的，在TypeScript里，当多个装饰器应用在一个声明上时会进行如下步骤的操作：
+
+1. 由上至下依次对装饰器表达式求值。
+2. 求值的结果会被当作函数，由下至上依次调用。
+
+如果我们使用[装饰器工厂](https://www.tslang.cn/docs/handbook/decorators.html#decorator-factories)的话，可以通过下面的例子来观察它们求值的顺序：
+
+```ts
+function f() {
+    console.log("f(): evaluated");
+    return function (target, propertyKey: string, descriptor: PropertyDescriptor) {
+        console.log("f(): called");
+    }
+}
+
+function g() {
+    console.log("g(): evaluated");
+    return function (target, propertyKey: string, descriptor: PropertyDescriptor) {
+        console.log("g(): called");
+    }
+}
+
+class C {
+    @f()
+    @g()
+    method() {}
+}
+```
+
+在控制台里会打印出如下结果：
+
+```shell
+f(): evaluated
+g(): evaluated
+g(): called
+f(): called
+```
+
+## 装饰器求值
+
+类中不同声明上的装饰器将按以下规定的顺序应用：
+
+1. *参数装饰器*，然后依次是*方法装饰器*，*访问符装饰器*，或*属性装饰器*应用到每个实例成员。
+2. *参数装饰器*，然后依次是*方法装饰器*，*访问符装饰器*，或*属性装饰器*应用到每个静态成员。
+3. *参数装饰器*应用到构造函数。
+4. *类装饰器*应用到类。
+
+## 类装饰器
+
+*类装饰器*在类声明之前被声明（紧靠着类声明）。 类装饰器应用于类构造函数，可以用来监视，修改或替换类定义。 类装饰器不能用在声明文件中( `.d.ts`)，也不能用在任何外部上下文中（比如`declare`的类）。
+
+类装饰器表达式会在运行时当作函数被调用，类的构造函数作为其唯一的参数。
+
+如果类装饰器返回一个值，它会使用提供的构造函数来替换类的声明。
+
+> 注意 如果你要返回一个新的构造函数，你必须注意处理好原来的原型链。 在运行时的装饰器调用逻辑中 *不会*为你做这些。
+
+下面是使用类装饰器(`@sealed`)的例子，应用在`Greeter`类：
+
+```ts
+@sealed
+class Greeter {
+    greeting: string;
+    constructor(message: string) {
+        this.greeting = message;
+    }
+    greet() {
+        return "Hello, " + this.greeting;
+    }
+}
+```
+
+我们可以这样定义`@sealed`装饰器：
+
+```ts
+function sealed(constructor: Function) {
+    Object.seal(constructor);
+    Object.seal(constructor.prototype);
+}
+```
+
+当`@sealed`被执行的时候，它将密封此类的构造函数和原型。(注：参见[Object.seal](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/seal))
+
+下面是一个重载构造函数的例子。
+
+```ts
+function classDecorator<T extends {new(...args:any[]):{}}>(constructor:T) {
+    return class extends constructor {
+        newProperty = "new property";
+        hello = "override";
+    }
+}
+
+@classDecorator
+class Greeter {
+    property = "property";
+    hello: string;
+    constructor(m: string) {
+        this.hello = m;
+    }
+}
+
+console.log(new Greeter("world"));
+```
+
+## 方法装饰器
+
+*方法装饰器*声明在一个方法的声明之前（紧靠着方法声明）。 它会被应用到方法的 *属性描述符*上，可以用来监视，修改或者替换方法定义。 方法装饰器不能用在声明文件( `.d.ts`)，重载或者任何外部上下文（比如`declare`的类）中。
+
+方法装饰器表达式会在运行时当作函数被调用，传入下列3个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+3. 成员的*属性描述符*。
+
+> 注意  如果代码输出目标版本小于`ES5`，*属性描述符*将会是`undefined`。
+
+如果方法装饰器返回一个值，它会被用作方法的*属性描述符*。
+
+> 注意  如果代码输出目标版本小于`ES5`返回值会被忽略。
+
+```typescript
+class Greeter {
+    greeting: string;
+    constructor(message: string) {
+        this.greeting = message;
+    }
+
+    @enumerable(false)
+    greet() {
+        return "Hello, " + this.greeting;
+    }
+}
+function enumerable(value: boolean) {
+    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+        descriptor.enumerable = value;
+    };
+}
+```
+
+
+
+
+
+#### 访问器装饰器
+
+- 应用于访问器的 *属性描述符*并且可以用来监视，修改或替换一个访问器的定义
+- 不能用在声明文件中（`.d.ts`）
+- 不能用在任何外部上下文（比如 `declare`的类）里
+
+访问器装饰器表达式会在运行时当作函数被调用，传入下列3个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+3. 成员的*属性描述符*。
+
+> 注意  如果代码输出目标版本小于`ES5`，*Property Descriptor*将会是`undefined`。
+
+如果访问器装饰器返回一个值，它会被用作方法的*属性描述符*。
+
+> 注意  如果代码输出目标版本小于`ES5`返回值会被忽略。
+
+```typescript
+class Point {
+    private _x: number;
+    private _y: number;
+    constructor(x: number, y: number) {
+        this._x = x;
+        this._y = y;
+    }
+
+    @configurable(false)
+    get x() { return this._x; }
+
+    @configurable(false)
+    get y() { return this._y; }
+}
+function configurable(value: boolean) {
+    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+        descriptor.configurable = value;
+    };
+}
+```
+
+#### 属性装饰器
+
+- 不能用在声明文件中（.d.ts），
+- 不能用在任何外部上下文（比如 `declare`的类）里
+
+属性装饰器表达式会在运行时当作函数被调用，传入下列2个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+
+
+
+-  *属性描述符*不会做为参数传入属性装饰器
+- 属性描述符只能用来监视类中是否声明了某个名字的属性
+- 没有办法在定义一个原型对象的成员时描述一个实例属性
+- 没办法监视或修改一个属性的初始化方法
+
+```typescript
+class Greeter {
+    @format("Hello, %s")
+    greeting: string;
+
+    constructor(message: string) {
+        this.greeting = message;
+    }
+    greet() {
+        let formatString = getFormat(this, "greeting");
+        return formatString.replace("%s", this.greeting);
+    }
+}
+import "reflect-metadata";
+
+const formatMetadataKey = Symbol("format");
+
+function format(formatString: string) {
+    return Reflect.metadata(formatMetadataKey, formatString);
+}
+
+function getFormat(target: any, propertyKey: string) {
+    return Reflect.getMetadata(formatMetadataKey, target, propertyKey);
+}
+```
+
+
+
+#### 参数装饰器
+
+*参数装饰器*声明在一个参数声明之前（紧靠着参数声明）。 参数装饰器应用于类构造函数或方法声明。 参数装饰器不能用在声明文件（.d.ts），重载或其它外部上下文（比如 `declare`的类）里。
+
+参数装饰器表达式会在运行时当作函数被调用，传入下列3个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+3. 参数在函数参数列表中的索引。
+
+> 注意  参数装饰器只能用来监视一个方法的参数是否被传入。
+
+参数装饰器的返回值会被忽略。
+
+```typescript
+class Greeter {
+    greeting: string;
+
+    constructor(message: string) {
+        this.greeting = message;
+    }
+
+    @validate
+    greet(@required name: string) {
+        return "Hello " + name + ", " + this.greeting;
+    }
+}
+
+import "reflect-metadata";
+
+const requiredMetadataKey = Symbol("required");
+
+function required(target: Object, propertyKey: string | symbol, parameterIndex: number) {
+    let existingRequiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyKey) || [];
+    existingRequiredParameters.push(parameterIndex);
+    Reflect.defineMetadata(requiredMetadataKey, existingRequiredParameters, target, propertyKey);
+}
+
+function validate(target: any, propertyName: string, descriptor: TypedPropertyDescriptor<Function>) {
+    let method = descriptor.value;
+    descriptor.value = function () {
+        let requiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyName);
+        if (requiredParameters) {
+            for (let parameterIndex of requiredParameters) {
+                if (parameterIndex >= arguments.length || arguments[parameterIndex] === undefined) {
+                    throw new Error("Missing required argument.");
+                }
+            }
+        }
+
+        return method.apply(this, arguments);
+    }
+}
+```
+
+#### 元素据
+
+需要第三坊库支持支[实验性的`metadata API`
+
+```shell
+npm i reflect-metadata --save
+```
+
+```typescript
+import "reflect-metadata";
+
+class Point {
+    x: number;
+    y: number;
+}
+
+class Line {
+    private _p0: Point;
+    private _p1: Point;
+
+    @validate
+    set p0(value: Point) { this._p0 = value; }
+    get p0() { return this._p0; }
+
+    @validate
+    set p1(value: Point) { this._p1 = value; }
+    get p1() { return this._p1; }
+}
+
+function validate<T>(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) {
+    let set = descriptor.set;
+    descriptor.set = function (value: T) {
+        let type = Reflect.getMetadata("design:type", target, propertyKey);
+        if (!(value instanceof type)) {
+            throw new TypeError("Invalid type.");
+        }
+        set(value);
+    }
+}
+```
+
+
+
+
+
+### Mixins
+
+```typescript
+// Disposable Mixin
+class Disposable {
+    isDisposed: boolean;
+    dispose() {
+        this.isDisposed = true;
+    }
+
+}
+
+// Activatable Mixin
+class Activatable {
+    isActive: boolean;
+    activate() {
+        this.isActive = true;
+    }
+    deactivate() {
+        this.isActive = false;
+    }
+}
+class SmartObject implements Disposable, Activatable {
+    constructor() {
+        setInterval(() => console.log(this.isActive + " : " + this.isDisposed), 500);
+    }
+
+    interact() {
+        this.activate();
+    }
+
+    // Disposable
+    isDisposed: boolean = false;
+    dispose: () => void;
+    // Activatable
+    isActive: boolean = false;
+    activate: () => void;
+    deactivate: () => void;
+}
+applyMixins(SmartObject, [Disposable, Activatable]);
+
+let smartObj = new SmartObject();
+setTimeout(() => smartObj.interact(), 1000);
+
+////////////////////////////////////////
+// In your runtime library somewhere
+////////////////////////////////////////
+
+/**
+历mixins上的所有属性，并复制到目标上去，把之前的占位属性替换成真正的实现代码。
+*/
+function applyMixins(derivedCtor: any, baseCtors: any[]) {
+    baseCtors.forEach(baseCtor => {
+        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
+            derivedCtor.prototype[name] = baseCtor.prototype[name];
+        });
+    });
+}
+```
+
+
+
+### 三斜线指令
+
+- 三斜线指令是包含单个XML标签的单行注释
+- 注释的内容会做为编译器指令使用
+- *仅*可放在包含它的文件的最顶端
+- 三斜线指令的前面只能出现单行或多行注释，这包括其它的三斜线指令
+- 若出现在一个语句或声明之后，那么它们会被当做普通的单行注释
+
+
+
+#### `/// <reference path="..." />`
+
+- 用于声明文件间的 *依赖*
+- 告诉编译器在编译过程中要引入的额外的文件
+
+
+
+#### `/// <reference types="..." />`
+
+- 用来声明 *依赖*的
+- 声明对某个包的依赖
+- 与在 `import`语句里对模块名的解析类似，可以简单地把三斜线类型引用指令当做 `import`声明的包。
+
+
+
+#### `/// <reference no-default-lib="true"/>`
+
+- 把一个文件标记成*默认库*，在 `lib.d.ts`文件和它不同的变体的顶端看到这个注释
+- 告诉编译器在编译过程中*不要*包含这个默认库
+
+
+
+#### `/// <amd-module />`
+
+默认情况下生成的AMD模块都是匿名的。 但是，当一些工具需要处理生成的模块时会产生问题，比如 `r.js`。
+
+`amd-module`指令允许给编译器传入一个可选的模块名：
+
+```typescript
+///<amd-module name='NamedModule'/>
+export class C {
+}
+```
+
+这会将`NamedModule`传入到AMD `define`函数里：
+
+```typescript
+define("NamedModule", ["require", "exports"], function (require, exports) {
+    var C = (function () {
+        function C() {
+        }
+        return C;
+    })();
+    exports.C = C;
+});
+```
+

@@ -35,3 +35,16 @@ export function json2URL(json: object) {
 export function createId() {
   return Date.now() + Math.floor(Math.random() * 10000).toString();
 }
+
+/**
+ * 从File对象读取加载，返回Base64
+ * @param img
+ * @param callback
+ */
+function imageFile2Base64(img): Promise<string | ArrayBuffer | null> {
+  const reader = new FileReader();
+  return new Promise((resolve) => {
+    reader.addEventListener('load', () => resolve(reader.result));
+    reader.readAsDataURL(img);
+  });
+}

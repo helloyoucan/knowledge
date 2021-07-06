@@ -77,3 +77,88 @@ function downloadFileByOssURL(url,fileName) {
       window.URL.revokeObjectURL(objectURL);
     })
 }
+
+/** 将text中的html字符转义， 仅转义  ', ", <, > 四个字符
+* @param  { String } str 需要转义的字符串
+* @returns { String }     转义后的字符串
+*/
+export function deHTML (str) {
+  return str ? str.replace(/[<">']/g, (a) => {
+    return {
+      '<': '&lt;',
+      '"': '&quot;',
+      '>': '&gt;',
+      "'": '&#39;'
+    }[a]
+  }) : ''
+}
+/**
+ * 将转义字符转换成正常字符
+ * @param {String}} str 字符串
+ */
+export function enHTML (str) {
+  let dom = document.createElement('p')
+  dom.innerHTML = str
+  const s = dom.innerText
+  dom = null
+  return s
+}
+
+/**
+ * 获取视频第一帧
+ */
+export function getCoverFromVideoFile (path, width = 1920, height = 1080) {
+  const tempId = Date.now()
+  const video = document.createElement('video')
+  video.src = 'file://' + path
+  video.id = tempId
+  video.style.position = 'fixed'
+  video.style.visibility = 'hidden'
+  video.style.top = 0
+  video.style.zIndex = -1
+  document.body.append(video)
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    video.addEventListener('loadeddata', function (e) {
+      setTimeout(() => {
+        canvas.width = this.videoWidth
+        canvas.height = this.videoHeight
+        ctx.drawImage(this, 0, 0, this.videoWidth, this.videoHeight)
+        resolve(canvas.toDataURL('image/jpeg'))
+        const idObject = document.getElementById(tempId)
+        if (idObject != null) {
+          idObject.parentNode.removeChild(idObject)
+        }
+      }, 1000)
+    })
+  })
+}
+
+/**
+ * 将base64转换为文件
+ * @param {String} dataurl base64的字符串
+ * @param {String} filename 文件名
+ * @returns {file}
+ */
+export function dataURLtoFile (dataurl, filename) {
+  const arr = dataurl.split(',')
+  const mime = arr[0].match(/:(.*?);/)[1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new File([u8arr], filename, { type: mime })
+}
+
+
+export function copyText(text){
+    const input = document.createElement('input')
+    input.value = text
+    document.body.appendChild(input)
+    input.select();
+    document.execCommand("copy");
+    input.remove()
+}
